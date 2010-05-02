@@ -1,0 +1,30 @@
+## Interface: 30300
+## Dependencies: LibPeriodicTable-3.1
+## OptionalDeps: 
+## SavedVariables: VD_GlobalDB
+## SavedVariablesPerCharacter: VD_LocalDB
+
+## Title: Viewda
+## Notes: Display contents of LibPeriodicTable, e.g. Bossdrops
+## Notes-deDE: Zeigt den Inhalt der LibPeriodicTable, z.B. Bossdrops
+## Author: ckaotik
+## Version: 3.3v0
+## X-Category: Inventory
+## X-Credits: AtlasLoot
+
+# libraries
+Libs\LibStub.lua
+Libs\LibQTip-1.0.lua
+Libs\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1.lua
+Libs\tekKonfig\tekKonfig.xml
+
+# localization files
+Locale\enUS.lua
+Locale\deDE.lua
+
+# core files
+constants.lua
+helper.lua
+core.lua
+options.lua
