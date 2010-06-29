@@ -7,8 +7,15 @@
 local _, Viewda = ...
 
 -- libraries & variables
-local LibQTip = LibStub('LibQTip-1.0')
-Viewda.LPT = LibStub('LibPeriodicTable-3.1')
+local LibQTip = LibStub("LibQTip-1.0")
+Viewda.LPT = LibStub("LibPeriodicTable-3.1")
+Viewda.Babble = {
+	talent = LibStub("LibBabble-TalentTree-3.0"),
+	inventory = LibStub("LibBabble-Inventory-3.0"),
+	faction = LibStub("LibBabble-Faction-3.0"),
+	boss = LibStub("LibBabble-Boss-3.0"),
+	zone = LibStub("LibBabble-Zone-3.0")
+}
 
 -- Event Handling
 -- ---------------------------------------------------------
@@ -168,7 +175,7 @@ Viewda.selectionButton = dropDownToggleButton
 Viewda.mainFrame.scrollFrame = CreateFrame("ScrollFrame", "ViewdaDisplayFrameScrollArea", Viewda.mainFrame, "UIPanelScrollFrameTemplate")
 	Viewda.mainFrame.scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 6, 0)
 	Viewda.mainFrame.scrollFrame:SetPoint("BOTTOMRIGHT", Viewda.mainFrame, "BOTTOMRIGHT", -28, 5)
-Viewda.mainFrame.content = CreateFrame("Frame", nil, scrollFrame)
+Viewda.mainFrame.content = CreateFrame("Frame", nil, Viewda.mainFrame.scrollFrame)
 	Viewda.mainFrame.content:SetAllPoints()
 	Viewda.mainFrame.content:SetHeight(365 - 4)
 	Viewda.mainFrame.content:SetWidth(270)

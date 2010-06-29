@@ -1,0 +1,49 @@
+TODO
+======
+* selection menu (take from Broker_Garbage)
+* favorites
+	* sort by: Role, iLvl, Name, Price / Value, Setname
+
+Structures
+==========
+VD_LocalDB = {
+	favorites = {
+		[1] = {
+			item = 1337,
+			set = "Imbaness.Of.P3w",
+			type = "item",
+		},
+		[2] = {
+			item = 2002,
+			set = "ClassSpells.Rogue",
+			type = "spell",
+		},
+		[3] = {
+			item = "Tier 10",
+			set = "GearSets.Tier10",
+			type = "category",
+		},
+	}
+}
+
+
+entry.
+	itemID		:: item ID of the item or string if it is a category
+	itemName	:: name of the item, spell name + rank for spells, category name for categories
+	itemLink	:: link for item or spell (used for creating the tooltip)
+	setName		:: the item's / spell's setName
+	value		:: value as found in LPT or 'link target' for categories
+	type		:: "item", "spell" or "category" - determines how entry data is accessed/what is displayed
+
+
+Changelog
+=========
+
+Resources
+=========
+* instance icons: http://wowprogramming.com/utils/artbrowser/LFGFrame.list
+* 'ping' animation: http://wowprogramming.com/utils/artbrowser/MINIMAP/Ping.list
+* prompt frame: http://wowprogramming.com/utils/artbrowser/RAIDFRAME.list
+* tutorial frame: http://wowprogramming.com/BlizzArt/TUTORIALFRAME/TUTORIALFRAMEBORDER.png
+
+* LibPeriodicTable: http://www.wowace.com/addons/libperiodictable-3-1/pages/api/

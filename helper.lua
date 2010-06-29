@@ -196,6 +196,19 @@ function Viewda:GetRoleColor(itemLink)
 	return 0.4, 0.1, 0.1
 end
 
+-- returns a localization of name, or nil if not found
+function Viewda:GetLocalizedName(name)
+	local data
+	for _, lib in pairs(Viewda.Babble) do
+		data = lib:GetUnstrictLookupTable()
+		if data and data[name] then
+			return data[name]
+		end
+	end
+	
+	return nil
+end
+
 -- function that's called when a list entry is clicked
 local function ViewOnClick(self, button)
 	local itemLink = self.itemLink or self:GetParent().itemLink
@@ -204,6 +217,9 @@ local function ViewOnClick(self, button)
 	
 	if IsModifiedClick("CHATLINK") and ChatFrameEditBox:IsVisible() then
 		ChatFrameEditBox:Insert(itemLink or self.tipText)
+	
+	elseif IsModifiedClick("DRESSUP") and IsDressableItem(itemLink) then
+		DressUpItemLink(itemLink)
 	
 	elseif button == "RightButton" and not self.request and itemID and not itemLink then
 		-- query server
@@ -428,7 +444,7 @@ function Viewda:UpdateDisplayEntry(i, item, value, setName, isSetMulti)
 	-- update the item's texts
 	equipType = equipType and Viewda.locale.ShortenItemSlot and Viewda.locale.ShortenItemSlot(equipType) or equipType
 	local equipment = (equipType and Viewda.locale.equipLocation[equipSlot] and not typ) and equipType.. ", " .. Viewda.locale.equipLocation[equipSlot]
-	local name = entry.itemName or Viewda.locale.unknown
+	local name = Viewda:GetLocalizedName(entry.itemName) or entry.itemName or Viewda.locale.unknown
 	local rarityColor = quality and select(4,GetItemQualityColor(quality))
 	
 	local sourceText = ""
@@ -445,6 +461,8 @@ function Viewda:UpdateDisplayEntry(i, item, value, setName, isSetMulti)
 			Viewda.skillColor[2] .. yellow .. "|r/" ..
 			Viewda.skillColor[3] .. green .. "|r/" ..
 			Viewda.skillColor[4] .. gray .. "|r"
+	elseif setName and string.find(setName, "InstanceLoot") then
+		sourceText = value/10 .. "%"
 	
 	else
 		sourceText = (equipment and equipment .. ", " or "") .. "|cffED9237" .. value
@@ -552,7 +570,11 @@ function Viewda:Show(setName)
 				tinsert(sortTable, subCategory)
 			end
 		end
-		sort(sortTable)
+		sort(sortTable, function(a,b)
+			local locA = Viewda:GetLocalizedName(a) or a
+			local locB = Viewda:GetLocalizedName(b) or b
+			return locA < locB
+		end)
 		
 		totalShown = #sortTable
 		for i = 1, totalShown do

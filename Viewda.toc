@@ -18,6 +18,12 @@ Libs\LibQTip-1.0.lua
 Libs\CallbackHandler-1.0.lua
 Libs\LibDataBroker-1.1.lua
 Libs\tekKonfig\tekKonfig.xml
+Libs\LibBabble-3.0.lua
+Libs\LibBabble-TalentTree-3.0.lua
+Libs\LibBabble-Inventory-3.0.lua
+Libs\LibBabble-Faction-3.0.lua
+Libs\LibBabble-Boss-3.0.lua
+Libs\LibBabble-Zone-3.0.lua
 
 # localization files
 Locale\enUS.lua
