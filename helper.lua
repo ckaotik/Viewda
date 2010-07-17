@@ -215,8 +215,8 @@ local function ViewOnClick(self, button)
 	local itemID = self.itemID or self:GetParent().itemID
 	local value = self.value or self:GetParent().value
 	
-	if IsModifiedClick("CHATLINK") and ChatFrameEditBox:IsVisible() then
-		ChatFrameEditBox:Insert(itemLink or self.tipText)
+	if IsModifiedClick("CHATLINK") and ChatFrame1EditBox:IsVisible() then
+		ChatFrame1EditBox:Insert(itemLink or self.tipText)
 	
 	elseif IsModifiedClick("DRESSUP") and IsDressableItem(itemLink) then
 		DressUpItemLink(itemLink)
@@ -367,7 +367,7 @@ function Viewda:UpdateDisplayEntry(i, item, value, setName, isSetMulti)
 		entry.type = "category"
 		entry.itemID = tostring(item)	-- category itemIDs are strings
 	
-	elseif typ == "item" or entry.itemID == math.abs(entry.itemID) then
+	elseif typ == "item" or (type(entry.itemID) == "number" and entry.itemID == math.abs(entry.itemID)) then
 		entry.type = "item"
 	
 	else
@@ -647,45 +647,6 @@ function Viewda:Show(setName)
 	else
 		Viewda:NoticeFrame()
 	end
-	--[[local noticeFrame = _G["ViewdaNoticeFrame"]
-	if not noticeFrame then
-		noticeFrame = CreateFrame("Frame", "ViewdaNoticeFrame", Viewda.mainFrame.scrollFrame)
-		noticeFrame:SetAllPoints()
-		noticeFrame:Hide()
-		
-		noticeFrame.textureTop = noticeFrame:CreateTexture()
-		noticeFrame.textureTop:SetParent(noticeFrame)
-		noticeFrame.textureTop:SetTexture("Interface\\QuestFrame\\UI-HorizontalBreak")
-		noticeFrame.textureTop:SetPoint("TOPLEFT")
-		noticeFrame.textureTop:SetPoint("BOTTOMRIGHT", noticeFrame, "TOPRIGHT", 0, -40)
-		noticeFrame.textureTop:SetBlendMode("ADD")
-		noticeFrame.textureTop:SetVertexColor(1, 1, 1, 1)
-		
-		noticeFrame.textureBottom = noticeFrame:CreateTexture()
-		noticeFrame.textureBottom:SetParent(noticeFrame)
-		noticeFrame.textureBottom:SetTexture("Interface\\QuestFrame\\UI-HorizontalBreak")
-		noticeFrame.textureBottom:SetPoint("TOPLEFT", noticeFrame, "BOTTOMLEFT", 0, 40)
-		noticeFrame.textureBottom:SetPoint("BOTTOMRIGHT")
-		noticeFrame.textureBottom:SetBlendMode("ADD")
-		noticeFrame.textureBottom:SetVertexColor(1, 1, 1, 1)
-		
-		noticeFrame.text = noticeFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-		noticeFrame.text:SetPoint("TOPLEFT", noticeFrame.textureTop, "BOTTOMLEFT")
-		noticeFrame.text:SetPoint("BOTTOMRIGHT", noticeFrame.textureBottom, "TOPRIGHT")
-		noticeFrame.text:SetNonSpaceWrap(true)
-		noticeFrame.text:SetJustifyH("CENTER")
-		noticeFrame.text:SetJustifyV("TOP")
-		noticeFrame.text:SetText("Notice text here.")
-		
-		Viewda:Print("noticeFrame created")
-	end
-	if Viewda.items[1] and Viewda.items[1]:IsShown() then
-		Viewda:Print("Items to view. Hide notice frame")
-		noticeFrame:Hide()
-	else
-		Viewda:Print("Nothing to view. Show notice frame")
-		noticeFrame:Show()
-	end ]]--
 	
 	-- update display text
 	Viewda.selectionButton:SetText(setName or Viewda.locale.selectionButtonText)
@@ -711,7 +672,7 @@ function Viewda:ShowCloseUp(item, value, setName)
 		if not Viewda.items[i] then
 			Viewda:CreateDisplayEntry(i, item, value, setName)
 		else
-			itemFrame = Viewda:UpdateDisplayEntry(i, item, value, setName)
+			itemFrame = Viewda:UpdateDisplayEntry(i, item, value, setName, "item")
 		end
 	end
 
