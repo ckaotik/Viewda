@@ -1,6 +1,5 @@
 _, Viewda = ...
 
-
 Viewda.locale = {
 	equipLocation = {
 		["INVTYPE_HEAD"] = "Head", 
@@ -35,6 +34,7 @@ Viewda.locale = {
 		["INVTYPE_RELIC"] = "Relic",
 	},
 	ShortenItemSlot = function(text)
+		if not text then return end
 		--[[if string.find(text, "^Einhand") or string.find(text, "^Zweihand") then
 			text = string.gsub(text, "^Einhand", "")
 			text = string.gsub(text, "^Zweihand", "")
@@ -46,7 +46,8 @@ Viewda.locale = {
 	leftClickToggle = "Click: Show/Hide", 
 	rightClickConfig = "Right-Click: Config",
 	
-	unknown = "Unbekannt",
+	unknown = "Unknown",
+	search = "Search ...",
 	category = "Category",
 	favorites = "Favorites",
 	

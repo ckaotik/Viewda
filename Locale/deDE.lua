@@ -34,12 +34,14 @@ if GetLocale() == "deDE" then
 		["INVTYPE_RELIC"] = "Relikt",
 	}
 	Viewda.locale.ShortenItemSlot = function(text)
+		if not text then return end
 		if string.find(text, "^Einhand") or string.find(text, "^Zweihand") then
 			text = string.gsub(text, "^Einhand", "")
 			text = string.gsub(text, "^Zweihand", "")
 			text = string.gsub(text, "^([\128-\196].)", string.upper)	-- if this starts with a UTF-8 special character
 			text = string.gsub(text, "^[^\128-\196]", string.upper)
 		end
+		text = string.gsub(text, "Verschiedenes", "Misc")
 		return text
 	end
 	
@@ -47,6 +49,7 @@ if GetLocale() == "deDE" then
 	Viewda.locale.rightClickConfig = "Rechts-Klick: Optionen"
 	
 	Viewda.locale.unknown = "Unbekannt"
+	Viewda.locale.search = "Suchen ..."
 	Viewda.locale.category = "Kategorie"
 	Viewda.locale.favorites = "Favoriten"
 	

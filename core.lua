@@ -115,9 +115,11 @@ titleFrame:EnableMouse(true)
 local dragHandle = titleFrame:CreateTitleRegion()
 	dragHandle:SetAllPoints(titleFrame)
 Viewda.mainFrame:SetPoint("TOP", titleFrame, "BOTTOM")
+Viewda.mainFrame:SetClampedToScreen(true)
+Viewda.mainFrame:SetToplevel(true)
 
 -- header and stuff
-local header = CreateFrame("Frame", nil, Viewda.mainFrame)
+local header = CreateFrame("Frame", "ViewdaHeaderBar", Viewda.mainFrame)
 	header:SetPoint("TOPLEFT", Viewda.mainFrame)
 	header:SetPoint("BOTTOMRIGHT", Viewda.mainFrame, "TOPRIGHT", 0, -30)
 	header:SetBackdrop({
@@ -171,10 +173,107 @@ local dropDownToggleButton, dropDownContainer = Viewda:CreateDropdown(header)
 	dropDownContainer:SetPoint("RIGHT", header)
 Viewda.selectionButton = dropDownToggleButton
 
+local filters = CreateFrame("Frame", "ViewdaFilterBar", Viewda.mainFrame)
+	filters:SetPoint("BOTTOMLEFT", Viewda.mainFrame)
+	filters:SetPoint("TOPRIGHT", Viewda.mainFrame, "BOTTOMRIGHT", 0, 40)	-- -> height :: 30
+	filters:SetBackdrop({
+		edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder", 
+		edgeSize = 16,
+	})
+
+Viewda.filter = {}
+local function CreateFilterButton(name, icon, tooltip, isChecked)
+	local button = CreateFrame("CheckButton", "ViewdaFilterButton"..name, filters, "ItemButtonTemplate")
+	button.name = name
+	button:SetCheckedTexture("Interface\\Buttons\\CheckButtonHilight")
+	button:GetCheckedTexture():SetBlendMode("ADD")
+	button:SetChecked(isChecked)
+	Viewda.filter[name] = isChecked
+	button:SetScale(0.6)
+	button.tipText = tooltip
+	button:SetScript("OnClick", function(self, button)
+		if self:GetChecked() then
+			Viewda.filter[self.name] = true
+		else
+			Viewda.filter[self.name] = false
+		end
+		Viewda:Show(Viewda.mainFrame.scrollFrame.current)
+	end)
+	button:SetScript("OnEnter", Viewda.ShowTooltip)
+	button:SetScript("OnLeave", Viewda.HideTooltip)
+	SetItemButtonTexture(button, icon)
+	
+	return button
+end
+local pve = CreateFilterButton("pve", "Interface\\Icons\\INV_Misc_Head_Dragon_Blue", "Show PvE Items", true)	-- Spell_Holy_SenseUndead
+local pvp = CreateFilterButton("pvp", 	"Interface\\Icons\\INV_Jewelry_TrinketPVP_"..(UnitFactionGroup("player") == "Alliance" and "01" or "02"), "Show PvP Items", true)	-- Achievement_BG_KillXEnemies_GeneralsRoom
+local heroic = CreateFilterButton("heroic", 	"Interface\\Icons\\Spell_Shadow_DemonicEmpathy", "Show Heroic Items", false)	-- Spell_Ice_Lament
+-- {"low", 	"Interface\\Icons\\INV_Shirt_Blue_01", "Show lower Tier items", true}, -- Spell_Holy_SummonChampion
+-- {"high", 	"Interface\\Icons\\INV_Chest_Cloth_65", "Show higher Tier items", true}, -- Spell_Holy_ChampionsBond
+
+pve:SetPoint("LEFT", 16, 0)
+pvp:SetPoint("LEFT", _G["ViewdaFilterButtonpve"], "RIGHT", 6, 0)
+heroic:SetPoint("LEFT", _G["ViewdaFilterButtonpvp"], "RIGHT", 16, 0)
+CreateFilterButton("tank", "Interface\\Icons\\Ability_Warrior_DefensiveStance", "Show Tank items", true):SetPoint("LEFT", _G["ViewdaFilterButtonheroic"], "RIGHT", 16, 0)	-- Ability_Warrior_ShieldMastery
+CreateFilterButton("melee", "Interface\\Icons\\Ability_Rogue_ShadowStrikes", "Show Melee items", true):SetPoint("LEFT", _G["ViewdaFilterButtontank"], "RIGHT", 6, 0)
+CreateFilterButton("caster", "Interface\\Icons\\Spell_Lightning_LightningBolt01", "Show Caster items", true):SetPoint("LEFT", _G["ViewdaFilterButtonmelee"], "RIGHT", 6, 0)
+CreateFilterButton("healer", "Interface\\Icons\\Spell_Shaman_BlessingOfTheEternals", "Show Healer items", true):SetPoint("LEFT", _G["ViewdaFilterButtoncaster"], "RIGHT", 6, 0)
+
+local searchbox = CreateFrame("EditBox", "ViewdaItemsFrameSearchBox", filters)
+	searchbox:SetAutoFocus(false)
+	searchbox:SetPoint("RIGHT", filters, "RIGHT", -8, 0)
+	searchbox:SetWidth(160)
+	searchbox:SetHeight(32)
+	searchbox:SetFontObject("GameFontNormalSmall")
+local left = searchbox:CreateTexture(nil, "BACKGROUND")
+	left:SetWidth(8) left:SetHeight(20)
+	left:SetPoint("LEFT", -5, 0)
+	left:SetTexture("Interface\\Common\\Common-Input-Border")
+	left:SetTexCoord(0, 0.0625, 0, 0.625)
+local right = searchbox:CreateTexture(nil, "BACKGROUND")
+	right:SetWidth(8) right:SetHeight(20)
+	right:SetPoint("RIGHT", 0, 0)
+	right:SetTexture("Interface\\Common\\Common-Input-Border")
+	right:SetTexCoord(0.9375, 1, 0, 0.625)
+local center = searchbox:CreateTexture(nil, "BACKGROUND")
+	center:SetHeight(20)
+	center:SetPoint("RIGHT", right, "LEFT", 0, 0)
+	center:SetPoint("LEFT", left, "RIGHT", 0, 0)
+	center:SetTexture("Interface\\Common\\Common-Input-Border")
+	center:SetTexCoord(0.0625, 0.9375, 0, 0.625)
+
+searchbox:SetScript("OnEscapePressed", searchbox.ClearFocus)
+searchbox:SetScript("OnEnterPressed", function(self)
+	local t = self:GetText()
+	self.searchString = t ~= "" and t ~= Viewda.locale.search and t:lower() or nil
+	Viewda:SearchInCurrentView(self.searchString)
+	
+	searchbox:ClearFocus()
+end)
+searchbox:SetScript("OnEditFocusGained", function(self)
+	if not self.searchString then
+		self:SetText("")
+		self:SetTextColor(1,1,1,1)
+	end
+end)
+searchbox:SetScript("OnEditFocusLost", function(self)
+	if self:GetText() == "" then
+		self:SetText(Viewda.locale.search)
+		self:SetTextColor(0.75, 0.75, 0.75, 1)
+	end
+end)
+searchbox:SetScript("OnTextChanged", function(self)
+	local t = self:GetText()
+	self.searchString = t ~= "" and t ~= Viewda.locale.search and t:lower() or nil
+	Viewda:SearchInCurrentView(self.searchString)
+end)
+searchbox:SetText(Viewda.locale.search)
+searchbox:SetTextColor(0.75, 0.75, 0.75, 1)
+
 -- actual content
 Viewda.mainFrame.scrollFrame = CreateFrame("ScrollFrame", "ViewdaDisplayFrameScrollArea", Viewda.mainFrame, "UIPanelScrollFrameTemplate")
 	Viewda.mainFrame.scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 6, 0)
-	Viewda.mainFrame.scrollFrame:SetPoint("BOTTOMRIGHT", Viewda.mainFrame, "BOTTOMRIGHT", -28, 5)
+	Viewda.mainFrame.scrollFrame:SetPoint("BOTTOMRIGHT", filters, "TOPRIGHT", -28, 0)
 Viewda.mainFrame.content = CreateFrame("Frame", nil, Viewda.mainFrame.scrollFrame)
 	Viewda.mainFrame.content:SetAllPoints()
 	Viewda.mainFrame.content:SetHeight(365 - 4)

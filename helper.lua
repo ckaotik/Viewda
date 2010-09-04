@@ -1,7 +1,5 @@
 _, Viewda = ...
 
-local debug = false
-
 -- Saved Variables
 -- --------------------------------------------------------
 -- check if all saved variables exist
@@ -33,7 +31,7 @@ end
 
 -- prints a debug message
 function Viewda:Debug(...)
-  if debug then
+  if VD_GlobalDB.debug then
 	Viewda:Print("! "..string.join(", ", tostringall(...)))
   end
 end
@@ -46,57 +44,43 @@ function Viewda:Find(table, value)
 	return false
 end
 
--- returns saved variables for external use
-function Viewda:GetOption(optionName, global)
-	--if global == nil then
-		--return VD_GlobalDB[optionName], BG_GlobalDB[optionName]
-	--elseif global == false then
-		--return BG_LocalDB[optionName]
-	--else
-		--return BG_GlobalDB[optionName]
-	--end
-	return VD_GlobalDB[optionName]
-end
-
-function Viewda:SetOption(optionName, value)
-	if VD_GlobalDB[optionName] then
-		VD_GlobalDB[optionName] = value
-		return true
+local function RequestItem(entry)
+	if not entry then return end
+	
+	if entry.request then
+		if entry.tipText and entry.tipText == Viewda.locale.tooltipUpdateIcon then
+			entry.request = nil
+			entry.tipText = nil
+			
+			Viewda:UpdateDisplayEntry(entry:GetID(), entry.itemID, entry.value)
+		end
 	else
-		return false
+		if VD_GlobalDB.showChatMessage_Query then
+			Viewda:Print(Viewda.locale.chatQueryServer)
+		end
+		GameTooltip:SetHyperlink("item:"..entry.itemID..":0:0:0:0:0:0:0")
+		
+		entry.request = true
+		entry.tipText = Viewda.locale.tooltipUpdateIcon
 	end
 end
 
 function Viewda:ShowTooltip()
 	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	local itemID = self.itemID or self:GetParent().itemID
-	local itemLink = self.itemLink or self:GetParent().itemLink or (itemID and select(2,GetItemInfo(itemID)))
+	local entry = self:GetParent()
+	local itemID = self.itemID or entry.itemID
+	local spellID = self.spellID or entry.spellID
+	local tipText = self.tipText or entry.tipText
+	local link = self.itemLink or entry.itemLink or (itemID and select(2,GetItemInfo(itemID))) or (spellID and GetSpellLink(spellID))
 	
-	if itemID and self.tipText and self.tipText == Viewda.locale.tooltipQueryServer 
-		and VD_GlobalDB.queryOnMouseover and not self.request then
-		
-		if VD_GlobalDB.showChatMessage_Query then
-			Viewda:Print(Viewda.locale.chatQueryServer)
-		end
-		GameTooltip:SetHyperlink("item:"..itemID..":0:0:0:0:0:0:0")
-		
-		self.tipText = Viewda.locale.tooltipUpdateIcon
-		self.request = true
+	if itemID and (not link and VD_GlobalDB.queryOnMouseover) or entry.request then
+		RequestItem(entry)
+	end
 	
-	elseif self.tipText and self.tipText == Viewda.locale.tooltipUpdateIcon and itemLink then
-		
-		self.request = nil
-		self.tipText = nil
-		self:GetParent().itemLink = itemLink
-		
-		GameTooltip:SetHyperlink(itemLink)
-		Viewda:UpdateDisplayEntry((self.ID or self:GetParent().ID), itemID, (self.value or self:GetParent().value))
-	
-    elseif self.tipText then
-		GameTooltip:SetText(self.tipText, nil, nil, nil, nil, true)
-    elseif itemLink then
-		GameTooltip:SetHyperlink(itemLink)
-		-- TODO: 5420 doesn't show a tooltip
+	if tipText then
+		GameTooltip:SetText(tipText, nil, nil, nil, nil, true)
+    elseif link then
+		GameTooltip:SetHyperlink(link)	-- TODO: 5420 doesn't show a tooltip
     end
     GameTooltip:Show()
 end
@@ -114,29 +98,20 @@ function Viewda:GetItemID(itemLink)
 	return tonumber(itemID)
 end
 
--- returns true if the given item is soulbound
-local scanTooltip = CreateFrame('GameTooltip', 'ViewdaItemScan', UIParent, 'GameTooltipTemplate')
-function Viewda:IsItemSoulbound(itemLink, bag, slot)
-	scanTooltip:SetOwner(UIParent, 'ANCHOR_NONE')
-	local searchString
+-- scans a given item for searchString
+local scanTooltip = CreateFrame("GameTooltip", "ViewdaItemScan", UIParent, "GameTooltipTemplate")
+function Viewda:ScanTooltip(itemLink, searchString)
+	if not itemLink or not searchString then return end
+	scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+	scanTooltip:SetHyperlink(itemLink)
 	
-	if not (bag and slot) then
-		-- check if item is BOP
-		scanTooltip:SetHyperlink(itemLink)
-		searchString = ITEM_BIND_ON_PICKUP
-	else
-		-- check if item is soulbound
-		scanTooltip:SetBagItem(bag, slot)
-		searchString = ITEM_SOULBOUND
-	end
-
-	local numLines = scanTooltip:NumLines()
-	for i = 1, numLines do
-		local leftLine = getglobal("ViewdaItemScan".."TextLeft"..i)
-		local leftLineText = leftLine:GetText()
+	for i = 1, scanTooltip:NumLines() or 0 do
+		local leftLine = getglobal(scanTooltip:GetName().."TextLeft"..i)
+		local leftLineText = leftLine and leftLine:GetText() or ""
 		
-		if string.find(leftLineText, searchString) then
-			return true
+		local found, _, text = string.find(leftLineText, searchString)
+		if found then
+			return true, text ~= "" and text or nil
 		end
 	end
 	return false
@@ -168,32 +143,44 @@ end
 
 -- returns LFD colors
 function Viewda:GetRoleColor(itemLink)
+	if not itemLink or not VD_GlobalDB.colorByRole then return 1, 1, 1, nil end
 	-- only care about equippable items
 	local itemSlot = select(9, GetItemInfo(itemLink))
-	if not itemSlot or not VD_GlobalDB.colorByRole
-		or not string.find(itemSlot, "INVTYPE") or string.find(itemSlot, "BAG") then
+	if not itemSlot or not string.find(itemSlot, "INVTYPE") or string.find(itemSlot, "BAG") then
 		
-		return 0, 0, 0
+		return 1, 1, 1, nil
 	end
 
 	-- see if we find any clues as for what role this item is intended
 	local stats = GetItemStats(itemLink)
+	-- first mutually exclusive stats
 	for stat, value in pairs(stats) do
 		if stat == "ITEM_MOD_DEFENSE_SKILL_RATING_SHORT"
 			or stat == "ITEM_MOD_DODGE_RATING_SHORT"
 			or stat == "ITEM_MOD_PARRY_RATING_SHORT"
-			or stat == "ITEM_MOD_BLOCK_RATING_SHORT" then
-			-- tank item
-			return 0, 0.2, 1
+			or stat == "ITEM_MOD_BLOCK_RATING_SHORT" then	-- tank item
+			return 0, 0, 1, "TANK"
 		elseif stat == "ITEM_MOD_MANA_REGENERATION_SHORT"
-			or stat == "ITEM_MOD_POWER_REGEN0_SHORT" then
-			-- heal item
-			return 0.1, 0.5, 0.4
+			or stat == "ITEM_MOD_POWER_REGEN0_SHORT" then	-- heal item
+			return 0, 1, 0, "HEALER"
 		end
 	end
 	
-	-- dps item / don't know
-	return 0.4, 0.1, 0.1
+	-- if we get here, we didn't decide yet
+	for stat, value in pairs(stats) do
+		if stat == "ITEM_MOD_SPELL_POWER_SHORT" then	-- caster
+			return 1, 0.4, 0, "CASTER"
+		elseif stat == "ITEM_MOD_ATTACK_POWER_SHORT" or
+			stat == "ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT" or
+			stat == "ITEM_MOD_EXPERTISE_RATING_SHORT" or 
+			stat == "ITEM_MOD_AGILITY_SHORT" or 
+			stat == "ITEM_MOD_STRENGTH_SHORT" then	-- melee
+			return 1, 0, 0.4, "MELEE"
+		end
+	end
+	
+	-- don't know
+	return 1, 1, 1, nil
 end
 
 -- returns a localization of name, or nil if not found
@@ -206,62 +193,41 @@ function Viewda:GetLocalizedName(name)
 		end
 	end
 	
-	return nil
+	return name
 end
 
 -- function that's called when a list entry is clicked
 local function ViewOnClick(self, button)
-	local itemLink = self.itemLink or self:GetParent().itemLink
-	local itemID = self.itemID or self:GetParent().itemID
-	local value = self.value or self:GetParent().value
+	local entry = self:GetParent()
+	local itemLink = entry.itemID and select(2, GetItemInfo(entry.itemID))
 	
-	if IsModifiedClick("CHATLINK") and ChatFrame1EditBox:IsVisible() then
-		ChatFrame1EditBox:Insert(itemLink or self.tipText)
+	if IsModifiedClick() then										-- this handles chat linking as well as dress-up
+		HandleModifiedItemClick(itemLink or entry.tipText)
+		return
+	end
 	
-	elseif IsModifiedClick("DRESSUP") and IsDressableItem(itemLink) then
-		DressUpItemLink(itemLink)
+	if button == "RightButton" and ((entry.itemID and not itemLink) or entry.request) then
+		RequestItem(entry:GetID())
 	
-	elseif button == "RightButton" and not self.request and itemID and not itemLink then
-		-- query server
-		if VD_GlobalDB.showChatMessage_Query then
-			Viewda:Print(Viewda.locale.chatQueryServer)
-		end
-		GameTooltip:SetHyperlink("item:"..itemID..":0:0:0:0:0:0:0")
-		
-		self.tipText = Viewda.locale.tooltipUpdateIcon
-		self.request = true
-	
-	elseif button == "RightButton" and self.request then
-		-- update display of queried items
-		local link = select(2, GetItemInfo(itemID))
-		if link then
-			self.request = nil
-			self.tipText = nil
-			self:GetParent().itemLink = itemLink
-			Viewda:UpdateDisplayEntry((self.ID or self:GetParent().ID), link, value)
-		end
-		
-	elseif self:GetParent().itemName == Viewda.locale.favorites then
-		-- show the favorites display
+	elseif entry.tipText == Viewda.locale.favorites then			-- show the favorites display
 		Viewda:ShowFavorites()
 	
-	elseif self:GetParent().type == "category" or Viewda.selectionButton:GetText() == Viewda.locale.favorites then
-		-- show content of this category
-		Viewda:Show(value)
+	elseif entry.tipText and not entry.itemID and not entry.spellID then	-- show content of this category
+		Viewda:Show(entry.value)
 	
-	elseif type(value) == "string" and string.find(value, "x") then
-		-- show close-up for this item
-		Viewda:ShowCloseUp(itemID, value, Viewda.selectionButton:GetText())
+	elseif type(value) == "string" and string.find(value, "x") then	-- show close-up for this item
+		Viewda:ShowCloseUp(entry.itemID, entry.value, Viewda.mainFrame.scrollFrame.current)
 	end
 end
 
 -- creates a pretty display for an item/string
-function Viewda:CreateDisplayEntry(index, item, value, setName, isSetMulti)
+function Viewda:CreateDisplayEntry(index, item, value, forceType)
 	if not item then return nil	end
 	-- display frame
 	local entry = CreateFrame("Frame", "ViewdaLootFrameEntry"..index, Viewda.mainFrame.content)
+	entry:SetID(index)
 	entry:SetWidth(180)
-	entry:SetHeight(4 + 32 + 12 + 4)	-- top + icon + extra line + bottom
+	entry:SetHeight(4 + 37 + 12 + 4)	-- top + icon + extra line + bottom
 	entry:SetBackdrop({
 		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
 		tile = false,
@@ -271,50 +237,36 @@ function Viewda:CreateDisplayEntry(index, item, value, setName, isSetMulti)
 	})
 	entry:SetBackdropColor(1, 1, 1, 0.3)
 	entry:SetBackdropBorderColor(1, 0.9, 0.5)
-	entry.ID = index
 
-	local itemTexture
 	-- icon & needed texture for it
-	entry.icon = CreateFrame("Button", nil, entry)
+	entry.icon = CreateFrame("Button", "Entry"..index.."Button", entry, "ItemButtonTemplate")
 	entry.icon:SetPoint("TOPLEFT", entry, "TOPLEFT", 4, -4)
-	entry.icon:SetWidth(32)
-	entry.icon:SetHeight(32)
-	entry.icon:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
 	
 	entry.icon:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	entry.icon:SetScript("OnClick", ViewOnClick)
 	entry.icon:SetScript("OnEnter", Viewda.ShowTooltip)
 	entry.icon:SetScript("OnLeave", Viewda.HideTooltip)
 	
-	-- overlay texture for glow effect (used for role coloring)
-	entry.overlay = entry.icon:CreateTexture()
-	entry.overlay:SetAllPoints()
-	entry.overlay:SetTexture("Interface\\Buttons\\CheckButtonHilight")
-	entry.overlay:SetBlendMode("ADD")
-	entry.overlay:SetDrawLayer("OVERLAY")
-	
 	-- favorite icon, used to mark an item
 	entry.favicon = CreateFrame("CheckButton", nil, entry)
-	entry.favicon:SetPoint("TOP", entry.icon, "BOTTOM", 0, 2)
+	entry.favicon:SetPoint("TOP", entry.icon, "BOTTOM", 0, 3)
 	entry.favicon:SetNormalTexture("Interface\\AddOns\\Viewda\\Media\\star1")
 	entry.favicon:GetNormalTexture():SetDesaturated(not entry.favicon:GetChecked())
-	entry.favicon:SetWidth(16)
-	entry.favicon:SetHeight(16)
-		
+	entry.favicon:SetWidth(16); entry.favicon:SetHeight(16)
 	entry.favicon:SetScript("OnClick", function(self, button)
-		if not entry.itemID then
+		local entry = self:GetParent()
+		if not (entry.itemID or entry.spellID or entry.tipText) then
 			self:SetChecked(not self:GetChecked())
 			return
 		end
-		local isFavorite = Viewda:IsFavorite(entry.itemID)
+		local isFavorite = Viewda:IsFavorite(entry.itemID or (entry.spellID and -1 * entry.spellID) or entry.tipText)
 		if self:GetChecked() then
 			self:GetNormalTexture():SetDesaturated(false)
 			local found = false
 			if not isFavorite then
 				tinsert(VD_LocalDB.favorites, {
-					itemID = entry.type == "spell" and -1*entry.itemID or entry.itemID,
-					type = entry.type,
-					set = entry.type == "category" and entry.value or entry.setName
+					itemID = entry.itemID or (entry.spellID and -1 * entry.spellID) or entry.tipText,
+					set = Viewda.mainFrame.scrollFrame.current
 				})
 			end
 		else
@@ -341,134 +293,102 @@ function Viewda:CreateDisplayEntry(index, item, value, setName, isSetMulti)
 	if index == 1 then
 		entry:SetPoint("TOPLEFT", Viewda.mainFrame.content, "TOPLEFT")
 	elseif index % 2 == 0 then
-		entry:SetPoint("TOPLEFT", Viewda.items[index-1], "TOPRIGHT", 4, 0)
+		entry:SetPoint("TOPLEFT", "ViewdaLootFrameEntry"..(index-1), "TOPRIGHT", 4, 0)
 	else
-		entry:SetPoint("TOPLEFT", Viewda.items[index-2], "BOTTOMLEFT", 0, -4)
+		entry:SetPoint("TOPLEFT", "ViewdaLootFrameEntry"..(index-2), "BOTTOMLEFT", 0, -4)
 	end
-	tinsert(Viewda.items, entry)
-	Viewda:UpdateDisplayEntry(index, item, value, setName, isSetMulti)
+	Viewda:UpdateDisplayEntry(index, item, value, entryType)
 end
 
 -- recycles a previously defined frame and fills it with new information
-function Viewda:UpdateDisplayEntry(i, item, value, setName, isSetMulti)
-	if not item then return end
-	local entry = Viewda.items[i]
-	local quality, itemTexture, equipSlot, equipType
+function Viewda:UpdateDisplayEntry(i, item, value, entryType)
+	local entry = _G["ViewdaLootFrameEntry"..i]
+	if not item or not entry then return end
 	
-	entry.itemID = item -- type(item) == "number" and item or Viewda:GetItemID(item)
-	entry.value = value
-	entry.setName = setName
+	local isCategory = nil
+	local itemTexture, itemLink
+	local itemText, sourceText = Viewda.locale.unknown, ""
 	
-	local typ
-	if type(isSetMulti) == "string" then
-		typ = isSetMulti
-	end
-	if typ == "category" or isSetMulti == true then
-		entry.type = "category"
-		entry.itemID = tostring(item)	-- category itemIDs are strings
+	_G[entry.icon:GetName().."NormalTexture"]:Show()
+	entry.favicon:Show()
+    entry.value = value
 	
-	elseif typ == "item" or (type(entry.itemID) == "number" and entry.itemID == math.abs(entry.itemID)) then
-		entry.type = "item"
-	
-	else
-		entry.type = "spell"
-		entry.itemID = math.abs(entry.itemID)	-- in LPT, signum negates you!
-	end
-	
-	-- update the icon
-	local showFavicon = true
-	if entry.type == "category" then
-		-- this is a category
-		if entry.value == Viewda.locale.favorites then
+	if type(item) == "string" then	-- category
+		entry.tipText = item
+		entry.itemID = nil
+		entry.spellID = nil
+		
+		isCategory = true
+		if value == Viewda.locale.favorites then
+			itemText = value
+			value = ""
 			itemTexture = "Interface\\AddOns\\Viewda\\Media\\star1"
-			showFavicon = false
+			_G[entry.icon:GetName().."NormalTexture"]:Hide()
+			entry.favicon:Hide()
 		else
-			itemTexture = "Interface\\Icons\\Ability_EyeOfTheOwl"
+			itemText = Viewda:GetLocalizedName(item)
 		end
 		
-		entry.itemName = tostring(item)
-		entry.itemLink = nil
-		entry.icon.tipText = item
-	
-	elseif entry.type == "spell" then
-		-- this is a spell
+	elseif type(item) == "number" and item < 0 then	-- spell
+		entry.tipText = nil
+		entry.itemID = nil
+		entry.spellID = -1 * item
+		
 		local rank
-		entry.itemName, rank, itemTexture = GetSpellInfo(entry.itemID)
-		entry.itemLink = GetSpellLink(entry.itemID)
-		entry.icon.tipText = nil
+		itemText, rank, itemTexture = GetSpellInfo(entry.spellID)
 		
 		if rank and rank ~= "" then
-			entry.itemName = entry.itemName .. ", " .. rank
+			itemText = itemText .. ",\n" .. rank
 		end
-	
-	else
-		-- this is an item
-		entry.itemName, entry.itemLink, quality, _, _, _, equipType, _, equipSlot, itemTexture = GetItemInfo(entry.itemID)
-		entry.icon.tipText = nil
+		if string.find(value, "x") then
+			sourceText = Viewda.locale.clickForCloseUp
+		end
+		
+	else					-- item
+		entry.tipText = nil
+		entry.itemID = item
+		entry.spellID = nil
+		
+		local quality, equipType, equipSlot
+		itemText, itemLink, quality, _, _, _, equipType, _, equipSlot, itemTexture = GetItemInfo(item)
+		itemText = itemText and (itemLink and (quality and select(4,GetItemQualityColor(quality))) or "") .. itemText or Viewda.locale.unknown
+		
+		equipType = Viewda.locale.ShortenItemSlot and Viewda.locale.ShortenItemSlot(equipType) or equipType
+		sourceText = equipType and equipType .. ", " or ""
+		sourceText = sourceText .. (Viewda.locale.equipLocation[equipSlot] and Viewda.locale.equipLocation[equipSlot] .. ", " or "")
 	end
+    if value == true then
+        value = ""
+        entry.value = ""
+        sourceText = string.gsub(sourceText, ", $", "")
+    end
 	
 	-- show or hide the favicon
-	entry.favicon:SetChecked(Viewda:IsFavorite(entry.itemID) and true or false)
+	entry.favicon:SetChecked(Viewda:IsFavorite(entry.itemID or (entry.spellID and -1 * entry.spellID) or entry.tipText) and true or false)
 	entry.favicon:GetNormalTexture():SetDesaturated(not entry.favicon:GetChecked())
-	if showFavicon and not typ then
-		entry.favicon:Show()
-	else
-		entry.favicon:Hide()
-	end
 	
-	local itemTex
-	-- update item texture
-	if not itemTexture then
-		itemTex = entry.icon:CreateTexture()
-		itemTex:SetTexture("Interface\\Spellbook\\UI-Spellbook-SpellBackground")
-		itemTex:SetTexCoord(0, 0.68, 0, 0.68)
-		itemTex:SetAllPoints()
-		
-		entry.icon.tipText = Viewda.locale.tooltipQueryServer
-	else
-		itemTex = entry.icon:CreateTexture()
-		itemTex:SetTexture(itemTexture)
-		itemTex:SetTexCoord(0, 1, 0, 1)
-		itemTex:SetAllPoints()
-	end
-	entry.icon:SetNormalTexture(itemTex)
-	
-	-- update the icon overlay
-	if entry.itemLink and equipSlot then
-		entry.overlay:SetVertexColor(Viewda:GetRoleColor(entry.itemLink))
-		entry.overlay:Show()
-	else
-		entry.overlay:Hide()
-	end
+	SetItemButtonTexture(entry.icon, itemTexture or "Interface\\Icons\\Ability_EyeOfTheOwl")
+	SetItemButtonNormalTextureVertexColor(entry.icon, Viewda:GetRoleColor(itemLink))
 	
 	-- update the item's texts
-	equipType = equipType and Viewda.locale.ShortenItemSlot and Viewda.locale.ShortenItemSlot(equipType) or equipType
-	local equipment = (equipType and Viewda.locale.equipLocation[equipSlot] and not typ) and equipType.. ", " .. Viewda.locale.equipLocation[equipSlot]
-	local name = Viewda:GetLocalizedName(entry.itemName) or entry.itemName or Viewda.locale.unknown
-	local rarityColor = quality and select(4,GetItemQualityColor(quality))
-	
-	local sourceText = ""
-	-- set the text values
-	if not value or type(value) == "boolean" or entry.type == "category" then
-		sourceText = equipment or ""
-	
+	if isCategory or (sourceText ~= "" and not entry.itemID) then
+		-- do nothing
 	elseif string.find(value, "x") then
 		sourceText = Viewda.locale.clickForCloseUp
-	
 	elseif string.find(value, "/") then
 		local orange, yellow, green, gray = string.split("/", value)
 		sourceText = Viewda.skillColor[1] .. orange .. "|r/" ..
 			Viewda.skillColor[2] .. yellow .. "|r/" ..
 			Viewda.skillColor[3] .. green .. "|r/" ..
 			Viewda.skillColor[4] .. gray .. "|r"
-	elseif setName and string.find(setName, "InstanceLoot") then
-		sourceText = value/10 .. "%"
-	
+	elseif Viewda.mainFrame.scrollFrame.current and string.find(Viewda.mainFrame.scrollFrame.current, "InstanceLoot") then
+		sourceText = sourceText .. "|cffED9237" .. value/10 .. "%"
 	else
-		sourceText = (equipment and equipment .. ", " or "") .. "|cffED9237" .. value
+		sourceText = sourceText .. "|cffED9237" .. value
 	end
 	
-	entry.text:SetText((entry.itemLink and rarityColor or "") .. name)
+	entry:SetAlpha(1)
+	entry.text:SetText(itemText)
 	entry.source:SetText(sourceText)
 	
 	entry:Show()
@@ -524,17 +444,83 @@ function Viewda:Search(searchString)
 	end
 end
 
+function Viewda:SearchInCurrentView(searchString)
+	--[[ local parts = { string.split("\"", searchString) }
+	local primaryParts, secondaryParts = {}, {}
+	for i = 1, #parts do
+		if i % 2 == 0 and i < #parts then
+			tinsert(primaryParts, parts[i])
+		else
+			tinsert(secondaryParts, parts[i])
+		end
+	end ]]
+
+	local i = 1
+	local entry = _G["ViewdaLootFrameEntry"..i]
+	while entry and entry:IsVisible() do
+		local itemName, itemLink
+        local classes, iLvl = "all", 0
+		if entry.itemID then
+			itemName, itemLink, _, iLvl	= GetItemInfo(entry.itemID)
+			
+			classes = string.gsub(ITEM_CLASSES_ALLOWED, "%s", "(.+)")
+			_, classes = Viewda:ScanTooltip(itemLink, classes)
+		end
+		local spellName, spellLink
+		if entry.spellID then
+			spellName = GetSpellInfo(entry.spellID)
+			spellLink = GetSpellLink(entry.spellID)
+		end
+        
+		local collection = (itemName or spellName or entry.tipText or Viewda.locale.unknown) .. "#" .. 
+			(iLvl and "iLvl:" .. iLvl or "") .. "#" ..
+			(classes and "c:" .. classes or "") .. "#" .. 
+			(itemLink and select(4, Viewda:GetRoleColor(itemLink)) or "") .. "#" ..
+			(entry.source and entry.source.GetText and entry.source:GetText() or "")
+		collection = collection:lower()
+		
+		Viewda:Debug("Searching in", collection)
+		if not searchString or string.match(collection, searchString) then
+			entry:SetAlpha(1)
+		else
+			entry:SetAlpha(0.3)
+		end
+		
+		i = i + 1
+		entry = _G["ViewdaLootFrameEntry"..i]
+	end
+end
+
+-- returns true if the <item> should be shown because of filter <filterName>
+function Viewda:SetFilter(item)
+	if not item or not (type(item) == "number" and item >= 0) then return end
+	item = select(2, GetItemInfo(item))
+	
+	local pve = Viewda.filter["pve"] and not Viewda:ScanTooltip(item, ITEM_MOD_RESILIENCE_RATING_SHORT)
+	local pvp = Viewda.filter["pvp"] and Viewda:ScanTooltip(item, ITEM_MOD_RESILIENCE_RATING_SHORT)
+	local heroic = (Viewda.filter["heroic"] and Viewda:ScanTooltip(item, ITEM_HEROIC)) or 
+		(not Viewda.filter["heroic"] and not Viewda:ScanTooltip(item, ITEM_HEROIC))
+	
+	local role = select(4, Viewda:GetRoleColor(item))
+	local tank = Viewda.filter["tank"] and role == "TANK"
+	local melee = Viewda.filter["melee"] and role == "MELEE"
+	local caster = Viewda.filter["caster"] and role == "CASTER"
+	local healer = Viewda.filter["healer"] and role == "HEALER"
+	
+	return (pve or pvp) and (not role or tank or melee or caster or healer) and heroic
+end
+
 function Viewda:Show(setName)
 	local setTable
 	if not setName then
 		setTable = Viewda.periodicTable
 	else
-		setTable = Viewda.LPT:GetSetTable(setName)
+		setTable = Viewda.LPT:GetSetTable(setName) or {}
 	end
+	Viewda.mainFrame.scrollFrame.current = setName
 	
 	local totalShown = 0
-	if not setName then
-		-- show absolute index
+	if not setName then		-- show absolute index
 		local sortTable = {}
 		for subSet, _ in pairs(setTable) do
 			tinsert(sortTable, subSet)
@@ -545,19 +531,19 @@ function Viewda:Show(setName)
 		for i = 1, totalShown do
 			local subSet = sortTable[i]
 			
-			if not Viewda.items[i] then
-				--						index  item     value    set(?)      isSetMulti
-				Viewda:CreateDisplayEntry(i, subSet, subSet, subSet, true)
+			if not _G["ViewdaLootFrameEntry"..i] then
+				--						index  item     value
+				Viewda:CreateDisplayEntry(i, subSet, subSet, true)
 			else
-				Viewda:UpdateDisplayEntry(i, subSet, subSet, subSet, true)
+				Viewda:UpdateDisplayEntry(i, subSet, subSet, true)
 			end
 		end
 		
 		totalShown = totalShown + 1
-		if not Viewda.items[totalShown] then
-			Viewda:CreateDisplayEntry(totalShown, Viewda.locale.favorites, Viewda.locale.favorites, "Favorites", true)
+		if not _G["ViewdaLootFrameEntry"..totalShown] then
+			Viewda:CreateDisplayEntry(totalShown, Viewda.locale.favorites, "Favorites", true)
 		else
-			Viewda:UpdateDisplayEntry(totalShown, Viewda.locale.favorites, Viewda.locale.favorites, "Favorites", true)
+			Viewda:UpdateDisplayEntry(totalShown, Viewda.locale.favorites, "Favorites", true)
 		end
 	
 	elseif Viewda.LPT:IsSetMulti(setName) then
@@ -581,10 +567,10 @@ function Viewda:Show(setName)
 			local subCategory = sortTable[i]
 		
 			local itemFrame
-			if not Viewda.items[i] then
-				Viewda:CreateDisplayEntry(i, subCategory, setName.."."..subCategory, setName, true)
+			if not _G["ViewdaLootFrameEntry"..i] then
+				Viewda:CreateDisplayEntry(i, subCategory, setName.."."..subCategory, true)
 			else
-				itemFrame = Viewda:UpdateDisplayEntry(i, subCategory, setName.."."..subCategory, setName, true)
+				itemFrame = Viewda:UpdateDisplayEntry(i, subCategory, setName.."."..subCategory, true)
 			end
 		end
 	else
@@ -623,26 +609,38 @@ function Viewda:Show(setName)
 			end
 		end)
 		
-		totalShown = #sortTable
-		for i = 1, totalShown do
+		local used = 0
+		for i = 1, #sortTable do
 			local item = sortTable[i].itemID
 			local value = sortTable[i].value
 			
-			if not Viewda.items[i] then
-				Viewda:CreateDisplayEntry(i, item, value, setName)
-			else
-				Viewda:UpdateDisplayEntry(i, item, value, setName)
+			if Viewda:SetFilter(item) then
+				used = used + 1
+				if not _G["ViewdaLootFrameEntry"..i] then
+					Viewda:CreateDisplayEntry(used, item, value, setName)
+				else
+					Viewda:UpdateDisplayEntry(used, item, value, setName)
+				end
 			end
 		end
+		totalShown = used
+		
+		local searchString = _G["ViewdaItemsFrameSearchBox"]:GetText()
+		searchString = searchString ~= Viewda.locale.search and searchString ~= "" and searchString or nil
+		Viewda:SearchInCurrentView(searchString)
 	end
 	
 	-- hide unused frames
-	for i = totalShown + 1, #(Viewda.items) do
-		Viewda.items[i]:Hide()
+	local total = totalShown
+	local frame = _G["ViewdaLootFrameEntry"..total + 1]
+	while frame do
+		total = total + 1
+		frame:Hide()
+		frame = _G["ViewdaLootFrameEntry"..total]
 	end
 	
 	-- notice frame
-	if not Viewda.items[1] or not Viewda.items[1]:IsShown() then 
+	if not _G["ViewdaLootFrameEntry"..1] or not _G["ViewdaLootFrameEntry"..1]:IsShown() then 
 		Viewda:NoticeFrame(Viewda.locale.setNotFound)
 	else
 		Viewda:NoticeFrame()
@@ -669,7 +667,7 @@ function Viewda:ShowCloseUp(item, value, setName)
 		local value = setTable[i].count
 		local itemFrame
 		
-		if not Viewda.items[i] then
+		if not _G["ViewdaLootFrameEntry"..i] then
 			Viewda:CreateDisplayEntry(i, item, value, setName)
 		else
 			itemFrame = Viewda:UpdateDisplayEntry(i, item, value, setName, "item")
@@ -677,13 +675,20 @@ function Viewda:ShowCloseUp(item, value, setName)
 	end
 
 	-- hide unused frames
-	for i = totalShown + 1, #(Viewda.items) do
-		Viewda.items[i]:Hide()
+	local total = totalShown
+	local frame = _G["ViewdaLootFrameEntry"..total + 1]
+	while frame do
+		total = total + 1
+		frame:Hide()
+		frame = _G["ViewdaLootFrameEntry"..total]
 	end
 	
 	-- update display text
 	local itemName = GetItemInfo(item)
 	Viewda.selectionButton:SetText((setName or "").."."..(itemName or Viewda.locale.unknown))
+	local searchString = _G["ViewdaItemsFrameSearchBox"]:GetText()
+	searchString = searchString ~= Viewda.locale.search and searchString ~= "" and searchString or nil
+	Viewda:SearchInCurrentView(searchString)
 end
 
 -- displayed fav'ed items
@@ -701,7 +706,7 @@ function Viewda:ShowFavorites()
 	-- show item entries
 	local totalShown = #sortTable
 	for i = 1, totalShown do
-		if not Viewda.items[i] then
+		if not _G["ViewdaLootFrameEntry"..i] then
 			Viewda:CreateDisplayEntry(i, sortTable[i].itemID, sortTable[i].set, Viewda.locale.favorites, sortTable[i].type)
 		else
 			Viewda:UpdateDisplayEntry(i, sortTable[i].itemID, sortTable[i].set, Viewda.locale.favorites, sortTable[i].type)
@@ -709,12 +714,16 @@ function Viewda:ShowFavorites()
 	end
 
 	-- hide unused frames
-	for i = totalShown + 1, #(Viewda.items) do
-		Viewda.items[i]:Hide()
+	local total = totalShown
+	local frame = _G["ViewdaLootFrameEntry"..total + 1]
+	while frame do
+		total = total + 1
+		frame:Hide()
+		frame = _G["ViewdaLootFrameEntry"..total]
 	end
 	
 	-- notice frame
-	if not Viewda.items[1] or not Viewda.items[1]:IsShown() then 
+	if not _G["ViewdaLootFrameEntry"..1] or not _G["ViewdaLootFrameEntry"..1]:IsShown() then 
 		Viewda:NoticeFrame(Viewda.locale.noFavorites)
 	else
 		Viewda:NoticeFrame()

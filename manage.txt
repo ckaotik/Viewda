@@ -2,7 +2,7 @@ TODO
 ======
 * selection menu (take from Broker_Garbage)
 * favorites
-	* sort by: Role, iLvl, Name, Price / Value, Setname
+	* sort by: Role, PvE/PvP, iLvl, Normal/Heroic, Name, Price / Value, Setname
 
 Structures
 ==========
