@@ -1,48 +1,6 @@
 _, Viewda = ...
 
 Viewda.locale = {
-	equipLocation = {
-		["INVTYPE_HEAD"] = "Head", 
-		["INVTYPE_NECK"] = "Neck",
-		["INVTYPE_SHOULDER"] = "Shoulder",
-		["INVTYPE_CHEST"] = "Chest",
-		["INVTYPE_ROBE"] = "Chest",
-		["INVTYPE_WAIST"] = "Waist",
-		["INVTYPE_LEGS"] = "Legs", 
-		["INVTYPE_FEET"] = "Feet",
-		["INVTYPE_WRIST"] = "Wrist",
-		["INVTYPE_HAND"] = "Hands",
-		["INVTYPE_FINGER"] = "Ring",
-		["INVTYPE_TRINKET"] = "Trinket",
-		["INVTYPE_CLOAK"] = "Cloak",
-		
-		["INVTYPE_BODY"] = "Body",
-		["INVTYPE_TABARD"] = "Tabard",
-		["INVTYPE_BAG"] = "Bag",
-		
-		["INVTYPE_WEAPON"] = "One-Handed",
-		["INVTYPE_2HWEAPON"] = "Two-Handed",
-		["INVTYPE_WEAPONMAINHAND"] = "Main-Hand",
-		["INVTYPE_WEAPONOFFHAND"] = "Off-Hand", 
-		["INVTYPE_HOLDABLE"] = "Holdable",	-- held in off-hand
-		["INVTYPE_SHIELD"] = "Shield",
-		
-		["INVTYPE_RANGEDRIGHT"] = "Ranged",	-- wands, guns, crossbows
-		["INVTYPE_THROWN"] = "Thrown",
-		["INVTYPE_RANGED"] = "Ranged",
-		["INVTYPE_AMMO"] = "Ammo",
-		["INVTYPE_RELIC"] = "Relic",
-	},
-	ShortenItemSlot = function(text)
-		if not text then return end
-		--[[if string.find(text, "^Einhand") or string.find(text, "^Zweihand") then
-			text = string.gsub(text, "^Einhand", "")
-			text = string.gsub(text, "^Zweihand", "")
-			text = string.gsub(text, "^%l", string.upper)
-		end]]
-		return text
-	end,
-	
 	leftClickToggle = "Click: Show/Hide", 
 	rightClickConfig = "Right-Click: Config",
 	

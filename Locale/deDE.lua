@@ -1,50 +1,6 @@
 _, Viewda = ...
 
 if GetLocale() == "deDE" then
-	Viewda.locale.equipLocation = {
-		["INVTYPE_HEAD"] = "Kopf", 
-		["INVTYPE_NECK"] = "Hals",
-		["INVTYPE_SHOULDER"] = "Schulter",
-		["INVTYPE_CHEST"] = "Brust",
-		["INVTYPE_ROBE"] = "Brust",
-		["INVTYPE_WAIST"] = "Gürtel",
-		["INVTYPE_LEGS"] = "Hosen", 
-		["INVTYPE_FEET"] = "Stiefel",
-		["INVTYPE_WRIST"] = "Arme",
-		["INVTYPE_HAND"] = "Hände",
-		["INVTYPE_FINGER"] = "Ring",
-		["INVTYPE_TRINKET"] = "Schmuck",
-		["INVTYPE_CLOAK"] = "Umhang",
-		
-		["INVTYPE_BODY"] = "Hemd",
-		["INVTYPE_TABARD"] = "Wappenrock",
-		["INVTYPE_BAG"] = "Tasche",
-		
-		["INVTYPE_WEAPON"] = "Einhand",
-		["INVTYPE_2HWEAPON"] = "Zweihand",
-		["INVTYPE_WEAPONMAINHAND"] = "Waffenhand",
-		["INVTYPE_WEAPONOFFHAND"] = "Schildhand", 
-		["INVTYPE_HOLDABLE"] = "Nebenhand",	-- held in off-hand
-		["INVTYPE_SHIELD"] = "Schildhand",
-		
-		["INVTYPE_RANGEDRIGHT"] = "Fernkampf",	-- wands, guns, crossbows
-		["INVTYPE_THROWN"] = "Wurfwaffen",
-		["INVTYPE_RANGED"] = "Bogen",
-		["INVTYPE_AMMO"] = "Munition",
-		["INVTYPE_RELIC"] = "Relikt",
-	}
-	Viewda.locale.ShortenItemSlot = function(text)
-		if not text then return end
-		if string.find(text, "^Einhand") or string.find(text, "^Zweihand") then
-			text = string.gsub(text, "^Einhand", "")
-			text = string.gsub(text, "^Zweihand", "")
-			text = string.gsub(text, "^([\128-\196].)", string.upper)	-- if this starts with a UTF-8 special character
-			text = string.gsub(text, "^[^\128-\196]", string.upper)
-		end
-		text = string.gsub(text, "Verschiedenes", "Misc")
-		return text
-	end
-	
 	Viewda.locale.leftClickToggle = "Klick: Zeigen/Verstecken"
 	Viewda.locale.rightClickConfig = "Rechts-Klick: Optionen"
 	

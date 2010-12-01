@@ -44,43 +44,22 @@ function Viewda:Find(table, value)
 	return false
 end
 
-local function RequestItem(entry)
-	if not entry then return end
-	
-	if entry.request then
-		if entry.tipText and entry.tipText == Viewda.locale.tooltipUpdateIcon then
-			entry.request = nil
-			entry.tipText = nil
-			
-			Viewda:UpdateDisplayEntry(entry:GetID(), entry.itemID, entry.value)
-		end
-	else
-		if VD_GlobalDB.showChatMessage_Query then
-			Viewda:Print(Viewda.locale.chatQueryServer)
-		end
-		GameTooltip:SetHyperlink("item:"..entry.itemID..":0:0:0:0:0:0:0")
-		
-		entry.request = true
-		entry.tipText = Viewda.locale.tooltipUpdateIcon
-	end
-end
-
-function Viewda:ShowTooltip()
-	GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-	local entry = self:GetParent()
-	local itemID = self.itemID or entry.itemID
-	local spellID = self.spellID or entry.spellID
-	local tipText = self.tipText or entry.tipText
-	local link = self.itemLink or entry.itemLink or (itemID and select(2,GetItemInfo(itemID))) or (spellID and GetSpellLink(spellID))
-	
-	if itemID and (not link and VD_GlobalDB.queryOnMouseover) or entry.request then
-		RequestItem(entry)
-	end
+function Viewda.ShowTooltip(object)
+	object = object or self
+	GameTooltip:SetOwner(object, "ANCHOR_RIGHT")
+	local entry = object:GetParent()
+	local itemID, spellID = object.itemID or entry.itemID, object.spellID or entry.spellID
+	local tipText = object.tipText or entry.tipText
+	local link = object.itemLink or entry.itemLink or (itemID and select(2,GetItemInfo(itemID))) or (spellID and GetSpellLink(spellID))
 	
 	if tipText then
 		GameTooltip:SetText(tipText, nil, nil, nil, nil, true)
     elseif link then
 		GameTooltip:SetHyperlink(link)	-- TODO: 5420 doesn't show a tooltip
+		if not (object.texture or entry.texture) then
+			Viewda:Print("Update...")
+			Viewda:UpdateDisplayEntry(entry:GetID(), itemID, (object.value or entry.value))
+		end
     end
     GameTooltip:Show()
 end
@@ -161,14 +140,16 @@ function Viewda:GetRoleColor(itemLink)
 			or stat == "ITEM_MOD_BLOCK_RATING_SHORT" then	-- tank item
 			return 0, 0, 1, "TANK"
 		elseif stat == "ITEM_MOD_MANA_REGENERATION_SHORT"
-			or stat == "ITEM_MOD_POWER_REGEN0_SHORT" then	-- heal item
+			or stat == "ITEM_MOD_POWER_REGEN0_SHORT"
+			or stat == "ITEM_MOD_SPIRIT_SHORT" then	-- heal item
 			return 0, 1, 0, "HEALER"
 		end
 	end
 	
 	-- if we get here, we didn't decide yet
 	for stat, value in pairs(stats) do
-		if stat == "ITEM_MOD_SPELL_POWER_SHORT" then	-- caster
+		if stat == "ITEM_MOD_SPELL_POWER_SHORT"
+			or stat == "ITEM_MOD_INTELLECT_SHORT" then	-- caster
 			return 1, 0.4, 0, "CASTER"
 		elseif stat == "ITEM_MOD_ATTACK_POWER_SHORT" or
 			stat == "ITEM_MOD_ARMOR_PENETRATION_RATING_SHORT" or
@@ -249,7 +230,8 @@ function Viewda:CreateDisplayEntry(index, item, value, forceType)
 	
 	-- favorite icon, used to mark an item
 	entry.favicon = CreateFrame("CheckButton", nil, entry)
-	entry.favicon:SetPoint("TOP", entry.icon, "BOTTOM", 0, 3)
+	--entry.favicon:SetPoint("TOP", entry.icon, "BOTTOM", 0, 3)
+	entry.favicon:SetPoint("TOPRIGHT", entry, "TOPRIGHT", -2, -2)
 	entry.favicon:SetNormalTexture("Interface\\AddOns\\Viewda\\Media\\star1")
 	entry.favicon:GetNormalTexture():SetDesaturated(not entry.favicon:GetChecked())
 	entry.favicon:SetWidth(16); entry.favicon:SetHeight(16)
@@ -285,13 +267,13 @@ function Viewda:CreateDisplayEntry(index, item, value, forceType)
 	entry.text:SetJustifyV("TOP")
 		
 	entry.source = entry:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	entry.source:SetPoint("TOPLEFT", entry.icon, "BOTTOMLEFT", 0, 0)
-	entry.source:SetPoint("BOTTOMRIGHT", entry, "BOTTOMRIGHT", -4, 4)
+	entry.source:SetPoint("TOPLEFT", entry.icon, "BOTTOMLEFT", 0, -2)
+	entry.source:SetPoint("BOTTOMRIGHT", entry, "BOTTOMRIGHT", -4, 2)
 	entry.source:SetJustifyH("RIGHT")
 	
 	-- anchor the whole thing
 	if index == 1 then
-		entry:SetPoint("TOPLEFT", Viewda.mainFrame.content, "TOPLEFT")
+		entry:SetPoint("TOPLEFT", Viewda.mainFrame.content, "TOPLEFT", 2, 0)
 	elseif index % 2 == 0 then
 		entry:SetPoint("TOPLEFT", "ViewdaLootFrameEntry"..(index-1), "TOPRIGHT", 4, 0)
 	else
@@ -311,17 +293,17 @@ function Viewda:UpdateDisplayEntry(i, item, value, entryType)
 	
 	_G[entry.icon:GetName().."NormalTexture"]:Show()
 	entry.favicon:Show()
-    entry.value = value
+    entry.value = type(value) == "boolean" and "" or value
 	
 	if type(item) == "string" then	-- category
 		entry.tipText = item
 		entry.itemID = nil
 		entry.spellID = nil
+		entry.texture = "Interface\\Icons\\Ability_EyeOfTheOwl"
 		
 		isCategory = true
 		if value == Viewda.locale.favorites then
-			itemText = value
-			value = ""
+			itemText = entry.value
 			itemTexture = "Interface\\AddOns\\Viewda\\Media\\star1"
 			_G[entry.icon:GetName().."NormalTexture"]:Hide()
 			entry.favicon:Hide()
@@ -334,13 +316,13 @@ function Viewda:UpdateDisplayEntry(i, item, value, entryType)
 		entry.itemID = nil
 		entry.spellID = -1 * item
 		
-		local rank
-		itemText, rank, itemTexture = GetSpellInfo(entry.spellID)
+		local rank, itemText
+		itemText, rank, entry.texture = GetSpellInfo(entry.spellID)
 		
 		if rank and rank ~= "" then
 			itemText = itemText .. ",\n" .. rank
 		end
-		if string.find(value, "x") then
+		if string.find(entry.value, "x") then
 			sourceText = Viewda.locale.clickForCloseUp
 		end
 		
@@ -349,42 +331,40 @@ function Viewda:UpdateDisplayEntry(i, item, value, entryType)
 		entry.itemID = item
 		entry.spellID = nil
 		
-		local quality, equipType, equipSlot
-		itemText, itemLink, quality, _, _, _, equipType, _, equipSlot, itemTexture = GetItemInfo(item)
-		itemText = itemText and (itemLink and (quality and select(4,GetItemQualityColor(quality))) or "") .. itemText or Viewda.locale.unknown
+		local quality, equipType, equipSlot, itemLink
+		itemText, itemLink, quality, _, _, _, equipType, _, equipSlot, entry.texture = GetItemInfo(item)
 		
-		equipType = Viewda.locale.ShortenItemSlot and Viewda.locale.ShortenItemSlot(equipType) or equipType
-		sourceText = equipType and equipType .. ", " or ""
-		sourceText = sourceText .. (Viewda.locale.equipLocation[equipSlot] and Viewda.locale.equipLocation[equipSlot] .. ", " or "")
+		itemText = itemText and (itemLink and (quality and select(4,GetItemQualityColor(quality))) or "") .. itemText or Viewda.locale.unknown
+		sourceText = "" .. (equipType and equipType .. ", " or "") .. (equipSlot and _G[equipSlot] and _G[equipSlot] .. ", " or "")
+		
+		if entry.value == "" then
+	        sourceText = string.sub(sourceText, 1, -3)
+	    end
 	end
-    if value == true then
-        value = ""
-        entry.value = ""
-        sourceText = string.gsub(sourceText, ", $", "")
-    end
 	
 	-- show or hide the favicon
 	entry.favicon:SetChecked(Viewda:IsFavorite(entry.itemID or (entry.spellID and -1 * entry.spellID) or entry.tipText) and true or false)
 	entry.favicon:GetNormalTexture():SetDesaturated(not entry.favicon:GetChecked())
 	
-	SetItemButtonTexture(entry.icon, itemTexture or "Interface\\Icons\\Ability_EyeOfTheOwl")
+    -- set button texture
+	SetItemButtonTexture(entry.icon, entry.texture or "Interface\\Icons\\Ability_EyeOfTheOwl")
 	SetItemButtonNormalTextureVertexColor(entry.icon, Viewda:GetRoleColor(itemLink))
 	
 	-- update the item's texts
 	if isCategory or (sourceText ~= "" and not entry.itemID) then
 		-- do nothing
-	elseif string.find(value, "x") then
+	elseif string.find(entry.value, "x") then
 		sourceText = Viewda.locale.clickForCloseUp
-	elseif string.find(value, "/") then
-		local orange, yellow, green, gray = string.split("/", value)
+	elseif string.find(entry.value, "/") then
+		local orange, yellow, green, gray = string.split("/", entry.value)
 		sourceText = Viewda.skillColor[1] .. orange .. "|r/" ..
 			Viewda.skillColor[2] .. yellow .. "|r/" ..
 			Viewda.skillColor[3] .. green .. "|r/" ..
 			Viewda.skillColor[4] .. gray .. "|r"
 	elseif Viewda.mainFrame.scrollFrame.current and string.find(Viewda.mainFrame.scrollFrame.current, "InstanceLoot") then
-		sourceText = sourceText .. "|cffED9237" .. value/10 .. "%"
+		sourceText = sourceText .. "|cffED9237" .. (type(entry.value) == "number" and entry.value or 0)/10 .. "%"
 	else
-		sourceText = sourceText .. "|cffED9237" .. value
+		sourceText = sourceText .. "|cffED9237" .. entry.value
 	end
 	
 	entry:SetAlpha(1)

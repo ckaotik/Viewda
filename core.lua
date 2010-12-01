@@ -67,7 +67,7 @@ Viewda.mainFrame = CreateFrame("Frame", "ViewdaDisplayFrame", UIParent)
 Viewda.mainFrame:SetFrameStrata("MEDIUM")
 Viewda.mainFrame:SetFrameLevel(10)
 Viewda.mainFrame:SetBackdrop({
-	bgFile = "Interface\\AchievementFrame\\UI-Achievement-AchievementBackground",
+	bgFile = "Interface\\AchievementFrame\\UI-Achievement-StatsBackground",
 	tile = false,
 	edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder", 
 	edgeSize = 16,
