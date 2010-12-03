@@ -57,7 +57,6 @@ function Viewda.ShowTooltip(object)
     elseif link then
 		GameTooltip:SetHyperlink(link)	-- TODO: 5420 doesn't show a tooltip
 		if not (object.texture or entry.texture) then
-			Viewda:Print("Update...")
 			Viewda:UpdateDisplayEntry(entry:GetID(), itemID, (object.value or entry.value))
 		end
     end
