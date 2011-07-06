@@ -133,14 +133,10 @@ function Viewda:GetRoleColor(itemLink)
 	local stats = GetItemStats(itemLink)
 	-- first mutually exclusive stats
 	for stat, value in pairs(stats) do
-		if stat == "ITEM_MOD_DEFENSE_SKILL_RATING_SHORT"
-			or stat == "ITEM_MOD_DODGE_RATING_SHORT"
-			or stat == "ITEM_MOD_PARRY_RATING_SHORT"
-			or stat == "ITEM_MOD_BLOCK_RATING_SHORT" then	-- tank item
+		if stat == "ITEM_MOD_DODGE_RATING_SHORT"
+			or stat == "ITEM_MOD_PARRY_RATING_SHORT" then	-- tank item
 			return 0, 0, 1, "TANK"
-		elseif stat == "ITEM_MOD_MANA_REGENERATION_SHORT"
-			or stat == "ITEM_MOD_POWER_REGEN0_SHORT"
-			or stat == "ITEM_MOD_SPIRIT_SHORT" then	-- heal item
+		elseif stat == "ITEM_MOD_SPIRIT_SHORT" then	-- heal item
 			return 0, 1, 0, "HEALER"
 		end
 	end
@@ -333,7 +329,7 @@ function Viewda:UpdateDisplayEntry(i, item, value, entryType)
 		local quality, equipType, equipSlot, itemLink
 		itemText, itemLink, quality, _, _, _, equipType, _, equipSlot, entry.texture = GetItemInfo(item)
 		
-		itemText = itemText and (itemLink and (quality and select(4,GetItemQualityColor(quality))) or "") .. itemText or Viewda.locale.unknown
+		itemText = itemText and (itemLink and (quality and "|c"..select(4,GetItemQualityColor(quality))) or "") .. itemText or Viewda.locale.unknown
 		sourceText = "" .. (equipType and equipType .. ", " or "") .. (equipSlot and _G[equipSlot] and _G[equipSlot] .. ", " or "")
 		
 		if entry.value == "" then
