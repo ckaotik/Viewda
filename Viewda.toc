@@ -17,6 +17,7 @@ Libs\LibQTip-1.0.lua
 Libs\CallbackHandler-1.0.lua
 Libs\LibDataBroker-1.1.lua
 Libs\tekKonfig\tekKonfig.xml
+Libs\LibItemSearch-1.0\LibItemSearch-1.0.lua
 Libs\LibBabble-3.0.lua
 Libs\LibBabble-TalentTree-3.0.lua
 Libs\LibBabble-Inventory-3.0.lua
