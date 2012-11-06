@@ -1,6 +1,6 @@
 ## Interface: 30300
-## Dependencies: LibPeriodicTable-3.1
-## OptionalDeps: 
+## Dependencies: LibPeriodicTable-3.1, Blizzard_EncounterJournal
+## OptionalDeps:
 ## SavedVariables: VD_GlobalDB
 ## SavedVariablesPerCharacter: VD_LocalDB
 
@@ -8,9 +8,8 @@
 ## Notes: Display contents of LibPeriodicTable, e.g. Bossdrops
 ## Notes-deDE: Zeigt den Inhalt der LibPeriodicTable, z.B. Bossdrops
 ## Author: ckaotik
-## Version: 3.3v0
+## Version: 5.0v0
 ## X-Category: Inventory
-## X-Credits: AtlasLoot
 
 # libraries
 Libs\LibStub.lua
@@ -21,9 +20,11 @@ Libs\tekKonfig\tekKonfig.xml
 Libs\LibBabble-3.0.lua
 Libs\LibBabble-TalentTree-3.0.lua
 Libs\LibBabble-Inventory-3.0.lua
+Libs\LibBabble-ItemSet-3.0.lua
 Libs\LibBabble-Faction-3.0.lua
 Libs\LibBabble-Boss-3.0.lua
 Libs\LibBabble-Zone-3.0.lua
+Libs\LibBabble-SubZone-3.0.lua
 
 # localization files
 Locale\enUS.lua
@@ -33,4 +34,5 @@ Locale\deDE.lua
 constants.lua
 helper.lua
 core.lua
+journal.lua
 options.lua

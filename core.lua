@@ -5,6 +5,7 @@
 --   Disclaimer: I provide no warranty whatsoever for what this addon does or doesn't do, even though I try my best to keep it working ;)
 
 local _, Viewda = ...
+_G["Viewda"] = Viewda
 
 -- libraries & variables
 local LibQTip = LibStub("LibQTip-1.0")
@@ -14,7 +15,8 @@ Viewda.Babble = {
 	inventory = LibStub("LibBabble-Inventory-3.0"),
 	faction = LibStub("LibBabble-Faction-3.0"),
 	boss = LibStub("LibBabble-Boss-3.0"),
-	zone = LibStub("LibBabble-Zone-3.0")
+	zone = LibStub("LibBabble-Zone-3.0"),
+	subzone = LibStub("LibBabble-SubZone-3.0"),
 }
 
 -- Event Handling
@@ -23,7 +25,7 @@ local function eventHandler(self, event, ...)
 	if event == "ADDON_LOADED" and arg1 == "Viewda" then
 		Viewda:Debug("Addon Viewda loaded!")
 		Viewda:CheckSettings()
-	end	
+	end
 end
 
 -- register events
@@ -36,10 +38,10 @@ frame:SetScript("OnEvent", eventHandler)
 -- ---------------------------------------------------------
 -- notation mix-up for B2FB to work
 local LDB = LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("Viewda", {
-	type	= "launcher", 
+	type	= "launcher",
 	icon	= "Interface\\Icons\\Ability_Hunter_SilentHunter",
 	label	= "Viewda",
-	
+
 	OnClick = function(self, button)
 		if button == "RightButton" then
 			-- open config
@@ -69,7 +71,7 @@ Viewda.mainFrame:SetFrameLevel(10)
 Viewda.mainFrame:SetBackdrop({
 	bgFile = "Interface\\AchievementFrame\\UI-Achievement-StatsBackground",
 	tile = false,
-	edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder", 
+	edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder",
 	edgeSize = 16,
 })
 Viewda.mainFrame:EnableMouse(true)
@@ -82,17 +84,19 @@ tinsert(UISpecialFrames, "ViewdaDisplayFrame")
 
 local titleFrame = CreateFrame("Frame", nil, Viewda.mainFrame)
 	titleFrame:SetPoint("CENTER", UIParent, "CENTER", 0, Viewda.mainFrame:GetHeight() / 2)
+	titleFrame:SetHeight(30)
 -- handle
-local titleText = titleFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+local titleText = titleFrame:CreateFontString(nil, "ARTWORK", "AchievementPointsFont")
+	titleText:SetPoint("BOTTOMRIGHT", titleFrame, "BOTTOMRIGHT", -22, 2)
 	titleText:SetPoint("BOTTOMLEFT", titleFrame, "BOTTOMLEFT", 2, 2)
 	titleText:SetText("Viewda "..GetAddOnMetadata("Viewda", "Version"))
 -- show close button
 local closeButton = CreateFrame("Button", "ViewdaDisplayFrame_CloseButton", titleFrame, "UIPanelCloseButton")
 	closeButton:SetWidth(32)
 	closeButton:SetHeight(32)
-	closeButton:SetPoint("LEFT", titleText, "RIGHT", 4, 0)
+	closeButton:SetPoint("RIGHT", titleFrame, "RIGHT", 8, -3)
 	closeButton:SetScript("OnClick", function(...) Viewda.mainFrame:Hide() end)
-	
+
 -- background for titleFrame
 local center = Viewda.mainFrame:CreateTexture("$parentCenter")
 	center:SetTexture("Interface\\QuestFrame\\UI-QuestLogSortTab-Middle")
@@ -123,7 +127,7 @@ local header = CreateFrame("Frame", "ViewdaHeaderBar", Viewda.mainFrame)
 	header:SetPoint("TOPLEFT", Viewda.mainFrame)
 	header:SetPoint("BOTTOMRIGHT", Viewda.mainFrame, "TOPRIGHT", 0, -30)
 	header:SetBackdrop({
-		edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder", 
+		edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder",
 		edgeSize = 16,
 	})
 
@@ -132,7 +136,7 @@ local menuButton = CreateFrame("Button", nil, header)
 	menuButton:SetWidth(24)
 	menuButton:SetHeight(24)
 	menuButton.tipText = Viewda.locale.tooltipMenuButton
-	
+
 	local sine, cosine = sin(-90 -45), cos(-90 - 45)	-- wanted_angle - 45
 	local tex = menuButton:CreateTexture()
 		tex:SetTexture("Interface\\Buttons\\UI-ScrollBar-ScrollUpButton-Up")
@@ -161,23 +165,25 @@ menuButton:SetScript("OnEnter", Viewda.ShowTooltip)
 menuButton:SetScript("OnLeave", Viewda.HideTooltip)
 menuButton:SetScript("OnClick", function(self, button)
 	if button == "LeftButton" then
-		local setName = string.match(Viewda.selectionButton:GetText(), "(.-)%.[^%.]*$")
+		local setName = string.match(UIDropDownMenu_GetText(Viewda.dropDown), "(.-)%.[^%.]*$")
 		Viewda:Show(setName)
 	elseif button == "RightButton" then
 		Viewda:Show()
 	end
 end)
 
-local dropDownToggleButton, dropDownContainer = Viewda:CreateDropdown(header)
-	dropDownContainer:SetPoint("LEFT", menuButton, "RIGHT")
-	dropDownContainer:SetPoint("RIGHT", header)
-Viewda.selectionButton = dropDownToggleButton
+local dropDown = Viewda:CreateDropdown(header)
+	dropDown:SetPoint("LEFT", menuButton, "RIGHT", -15, 0)
+	UIDropDownMenu_SetText(dropDown, Viewda.locale.selectionButtonText)
+	UIDropDownMenu_SetWidth(dropDown, 350)
+	UIDropDownMenu_JustifyText(dropDown, "CENTER")
+Viewda.dropDown = dropDown
 
 local filters = CreateFrame("Frame", "ViewdaFilterBar", Viewda.mainFrame)
 	filters:SetPoint("BOTTOMLEFT", Viewda.mainFrame)
 	filters:SetPoint("TOPRIGHT", Viewda.mainFrame, "BOTTOMRIGHT", 0, 40)	-- -> height :: 30
 	filters:SetBackdrop({
-		edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder", 
+		edgeFile = "Interface\\AchievementFrame\\UI-Achievement-WoodBorder",
 		edgeSize = 16,
 	})
 
@@ -197,12 +203,12 @@ local function CreateFilterButton(name, icon, tooltip, isChecked)
 		else
 			Viewda.filter[self.name] = false
 		end
-		Viewda:Show(Viewda.mainFrame.scrollFrame.current)
+		Viewda:Show(Viewda.displayedSet)
 	end)
 	button:SetScript("OnEnter", Viewda.ShowTooltip)
 	button:SetScript("OnLeave", Viewda.HideTooltip)
 	SetItemButtonTexture(button, icon)
-	
+
 	return button
 end
 local pve = CreateFilterButton("pve", "Interface\\Icons\\INV_Misc_Head_Dragon_Blue", "Show PvE Items", true)	-- Spell_Holy_SenseUndead
@@ -243,13 +249,8 @@ local center = searchbox:CreateTexture(nil, "BACKGROUND")
 	center:SetTexCoord(0.0625, 0.9375, 0, 0.625)
 
 searchbox:SetScript("OnEscapePressed", searchbox.ClearFocus)
-searchbox:SetScript("OnEnterPressed", function(self)
-	local t = self:GetText()
-	self.searchString = t ~= "" and t ~= Viewda.locale.search and t:lower() or nil
-	Viewda:SearchInCurrentView(self.searchString)
-	
-	searchbox:ClearFocus()
-end)
+searchbox:SetScript("OnEnterPressed", searchbox.ClearFocus)
+
 searchbox:SetScript("OnEditFocusGained", function(self)
 	if not self.searchString then
 		self:SetText("")
@@ -258,27 +259,30 @@ searchbox:SetScript("OnEditFocusGained", function(self)
 end)
 searchbox:SetScript("OnEditFocusLost", function(self)
 	if self:GetText() == "" then
+		self.searchString = nil
 		self:SetText(Viewda.locale.search)
 		self:SetTextColor(0.75, 0.75, 0.75, 1)
 	end
 end)
 searchbox:SetScript("OnTextChanged", function(self)
 	local t = self:GetText()
-	self.searchString = t ~= "" and t ~= Viewda.locale.search and t:lower() or nil
-	Viewda:SearchInCurrentView(self.searchString)
+	self.searchString = (t ~= "" and t ~= Viewda.locale.search) and t:lower() or nil
+	Viewda:SearchInCurrentView(self.searchString or "")
 end)
 searchbox:SetText(Viewda.locale.search)
 searchbox:SetTextColor(0.75, 0.75, 0.75, 1)
 
 -- actual content
-Viewda.mainFrame.scrollFrame = CreateFrame("ScrollFrame", "ViewdaDisplayFrameScrollArea", Viewda.mainFrame, "UIPanelScrollFrameTemplate")
-	Viewda.mainFrame.scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 6, 0)
-	Viewda.mainFrame.scrollFrame:SetPoint("BOTTOMRIGHT", filters, "TOPRIGHT", -28, 0)
-Viewda.mainFrame.content = CreateFrame("Frame", nil, Viewda.mainFrame.scrollFrame)
-	Viewda.mainFrame.content:SetAllPoints()
-	Viewda.mainFrame.content:SetHeight(365 - 4)
-	Viewda.mainFrame.content:SetWidth(270)
-Viewda.mainFrame.scrollFrame:SetScrollChild(Viewda.mainFrame.content)
+Viewda.scrollFrame = CreateFrame("ScrollFrame", "Viewda_ScrollFrame", Viewda.mainFrame, "FauxScrollFrameTemplate")
+Viewda.scrollFrame:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 6, 0)
+Viewda.scrollFrame:SetPoint("BOTTOMRIGHT", filters, "TOPRIGHT", -28, 0)
+
+Viewda.scrollFrame.rowHeight = 4+37+12 +4	-- top + icon + extra line + bottom
+Viewda.scrollFrame.numRows = 7
+Viewda.scrollFrame.numPerRow = 2
+Viewda.scrollFrame:SetScript("OnVerticalScroll", function(frame, offset)
+	FauxScrollFrame_OnVerticalScroll(frame, offset, frame.rowHeight, Viewda.UpdateDisplay)
+end)
 
 -- show overview
 Viewda:Show()
