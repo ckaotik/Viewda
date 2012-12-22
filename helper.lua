@@ -180,13 +180,18 @@ function Viewda:GetLocalizedName(name)
 		return Viewda.locale[name]
 	end
 
-	local data
-	for _, lib in pairs(Viewda.Babble) do
-		data = lib:GetUnstrictLookupTable()
-		if data and data[name] then
-			return data[name]
+	--[[ local number = tonumber(name)
+	if number then
+		name = GetItemInfo(number) or GetSpellInfo(number) or name
+	else --]]
+		local data
+		for _, lib in pairs(Viewda.Babble) do
+			data = lib:GetUnstrictLookupTable()
+			if data and data[name] then
+				return data[name]
+			end
 		end
-	end
+	-- end
 
 	return name
 end
@@ -243,7 +248,7 @@ function Viewda.CreateDisplayEntry(index)
 	entry:SetBackdropBorderColor(1, 0.9, 0.5)
 
 	-- icon & needed texture for it
-	entry.icon = CreateFrame("Button", "Entry"..index.."Button", entry, "ItemButtonTemplate")
+	entry.icon = CreateFrame("Button", "ViewdaLootFrameEntry"..index.."Button", entry, "ItemButtonTemplate")
 	entry.icon:SetPoint("TOPLEFT", entry, "TOPLEFT", 4, -4)
 
 	entry.icon:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -453,16 +458,15 @@ function Viewda:Search(searchString)
 end
 
 local ItemSearch = LibStub('LibItemSearch-1.0')
-local simpleSearch = ItemSearch:GetTypedSearch('itemName')
 ItemSearch:RegisterTypedSearch{
 	id = 'classRestriction',
 	tags = {'c', 'class'},
-
 	canSearch = function(self, _, search)
 		return search
 	end,
-
 	findItem = function(self, link, _, search)
+		if link:find("battlepet") then return false end
+
 		local tooltipScanner = _G['LibItemSearchTooltipScanner']
 		tooltipScanner:SetOwner(UIParent, 'ANCHOR_NONE')
 		tooltipScanner:SetHyperlink(link)
@@ -472,14 +476,23 @@ ItemSearch:RegisterTypedSearch{
 			local text =  _G[tooltipScanner:GetName() .. 'TextLeft' .. i]:GetText():lower()
 			text = string.find(text, pattern)
 
-			if text and text:find(search) then
+			if text and tostring(text):find(search) then
 				return true
 			end
 		end
-
 		return false
 	end,
 }
+ItemSearch:RegisterTypedSearch{
+	id = 'text',
+	canSearch = function(self, _, search)
+		return search
+	end,
+	findItem = function(self, text, _, search)
+		return text:lower():find(search)
+	end,
+}
+local simpleSearch = ItemSearch:GetTypedSearch('text')
 
 function Viewda:SearchEntry(entry, searchString)
 	local link
@@ -496,7 +509,6 @@ function Viewda:SearchEntry(entry, searchString)
 		if link ~= entry.text:GetText() then
 			link = link and (link .. " " .. entry.text:GetText())
 		end
-		link = link and "["..link.."]" or nil
 		return not (link and ItemSearch:UseTypedSearch(simpleSearch, link, nil, searchString))
 	end
 end
@@ -542,8 +554,12 @@ function Viewda.UpdateDisplay()
 	for i = 1, frame.numRows*frame.numPerRow do
 		idx = offset + i
 
-		name = frame.data[idx]
-		path = Viewda.displayedSet
+		if frame.data[idx] and string.find(frame.data[idx], '|') then
+			name, path = string.split('|', frame.data[idx])
+		else
+			name = frame.data[idx]
+			path = Viewda.displayedSet
+		end
 
 		entry = _G['ViewdaLootFrameEntry'..i]
 		if idx <= #frame.data and name then
@@ -554,36 +570,50 @@ function Viewda.UpdateDisplay()
 	end
 end
 
-local SortByName = function(a,b)
+local function SortByName(a,b)
 	local locA = Viewda:GetLocalizedName(a) or a
 	local locB = Viewda:GetLocalizedName(b) or b
 	return locA < locB
 end
-local SortByValue = function(a, b) -- [TODO]
-	if type(a.value) == "boolean" or type(b.value) == "boolean" then
-		return a.itemID < b.itemID
+local function SortByValue(a, b)
+	local path = Viewda.displayedSet
+	if path == "Favorites" then
+		path = ""
+	end
 
-	elseif tonumber(a.value) and tonumber(b.value) then
-		return tonumber(a.value) < tonumber(b.value)
+	local valueA, valueB
+	if path ~= "" then
+		valueA = Viewda.LPT:GetSetTable(path)[a]
+		valueB = Viewda.LPT:GetSetTable(path)[b]
+	end
 
-	elseif string.find(a.value, "/") or string.find(b.value, "/") then
-		local aTab = { strsplit("/", a.value) }
-		local bTab = { strsplit("/", b.value) }
-
-		local aVal, bVal
-
-		for i = #aTab, 1, -1 do
-			aVal = tonumber(aTab[i])
-			bVal = tonumber(bTab[i])
-
-			if aVal and bVal and aVal ~= bVal then
-				return aVal < bVal
-			end
-		end
-		return a.value < b.value
-
+	if not valueA and not valueB then
+		return SortByName(a, b)
+	elseif not (valueA and valueB) then
+		-- category strings before actual items
+		return not valueA
 	else
-		return a.value < b.value
+		valueA = (valueA == true) and -1 or valueA
+		valueB = (valueB == true) and -1 or valueB
+
+		if string.find(valueA, "/") then
+			valueA = string.match(valueA, "%d+")
+			valueA = tonumber(valueA)
+		elseif type(valueA) == "string" then
+			valueA = -1
+		end
+		if string.find(valueB, "/") then
+			valueB = string.match(valueB, "%d+")
+			valueB = tonumber(valueB)
+		elseif type(valueB) == "string" then
+			valueB = -1
+		end
+
+		if valueA ~= valueB then
+			return valueA < valueB
+		else
+			return SortByName(a, b)
+		end
 	end
 end
 function Viewda:Show(setName)
@@ -627,11 +657,28 @@ function Viewda:Show(setName)
 
 	elseif Viewda.LPT:IsSetMulti(setName) then
 		-- show category sub-categories
-		local subCategory
+		local subCategory, treeLevel, path
 
 		for _, subTable in pairs(setTable) do
-			subCategory = string.sub(subTable.set, strlen(setName)+2) -- after setName end + following "."
-			subCategory = string.split('.', subCategory)
+			-- note: "." in setNames might mess up matching, but I don't care right now
+			if string.match(subTable.set, "^"..setName) then
+				subCategory = string.sub(subTable.set, strlen(setName)+2) -- after setName end + following "."
+				subCategory = string.split('.', subCategory)
+			else
+				_, treeLevel = string.gsub(setName, "%.", "")
+				treeLevel = treeLevel and treeLevel+1
+				path = nil
+
+				for i, part in ipairs( { string.split('.', subTable.set) } ) do
+					if i <= treeLevel then
+						path = (path and path.."." or "") .. part
+					else
+						subCategory = part
+						break
+					end
+				end
+				subCategory = subCategory.."|"..path
+			end
 
 			if not Viewda:Find(sortTable, subCategory) then
 				table.insert(sortTable, subCategory)
@@ -647,7 +694,7 @@ function Viewda:Show(setName)
 				table.insert(sortTable, itemID)
 			end
 		end
-		table.sort(sortTable, SortByName)
+		table.sort(sortTable, SortByValue)
 	end
 
 	Viewda.UpdateDisplay()
