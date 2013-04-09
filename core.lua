@@ -286,3 +286,55 @@ end)
 
 -- show overview
 Viewda:Show()
+
+
+
+
+
+
+
+-- -----------
+-- Whishlist: Create a regular styles frame that shows entries like gnomishvendorshrinker
+-- <Frame name="CharacterFrame" toplevel="true" movable="true" parent="UIParent" hidden="true" inherits="ButtonFrameTemplate">
+-- foo = CreateFrame("Frame", "LPTBrowser", UIParent, "ButtonFrameTemplate")
+--[[
+foo:EnableMouse()
+foo:SetWidth(646)
+foo:Hide()
+foo:SetAttribute("UIPanelLayout-defined", true)
+foo:SetAttribute("UIPanelLayout-enabled", true)
+foo:SetAttribute("UIPanelLayout-whileDead", true)
+foo:SetAttribute("UIPanelLayout-area", "left")
+foo:SetAttribute("UIPanelLayout-pushable", 5)
+foo:SetAttribute("UIPanelLayout-width", 646)
+foo:SetAttribute("UIPanelLayout-height", 468)
+
+ButtonFrameTemplate_HideAttic(frame)
+ButtonFrameTemplate_HideButtonBar(frame)
+SetPortraitToTexture(frame:GetName().."Portrait", "Interface\\Icons\\Achievement_BG_trueAVshutout")
+frame.TitleText:SetText("TopFit")
+]]
+--[[ <CheckButton parentKey="LFGBonusRepButton" motionScriptsWhileDisabled="true">
+  <Size x="16" y="16"/>
+  <Anchors>
+    <Anchor point="RIGHT" relativeTo="$parentBackground" relativePoint="LEFT" x="-2" y="0"/>
+  </Anchors>
+  <NormalTexture file="Interface\Common\ReputationStar">
+    <TexCoords left="0.5" right="1" top="0" bottom="0.5"/>
+  </NormalTexture>
+  <HighlightTexture file="Interface\Common\ReputationStar">
+    <TexCoords left="0" right="0.5" top="0.5" bottom="1"/>
+  </HighlightTexture>
+  <CheckedTexture file="Interface\Common\ReputationStar">
+    <TexCoords left="0" right="0.5" top="0" bottom="0.5"/>
+  </CheckedTexture>
+  <Scripts>
+    <OnEnter>
+      GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+      GameTooltip:SetText(LFG_BONUS_REPUTATION_TOOLTIP, nil, nil, nil, nil, true);
+      GameTooltip:Show();
+    </OnEnter>
+    <OnLeave function="GameTooltip_Hide"/>
+    <OnClick function="ReputationBarLFGBonusRepButton_OnClick"/>
+  </Scripts>
+</CheckButton> --]]
