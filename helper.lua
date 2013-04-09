@@ -260,7 +260,7 @@ function Viewda.CreateDisplayEntry(index)
 	entry.favicon = CreateFrame("CheckButton", nil, entry)
 	--entry.favicon:SetPoint("TOP", entry.icon, "BOTTOM", 0, 3)
 	entry.favicon:SetPoint("TOPRIGHT", entry, "TOPRIGHT", -2, -2)
-	entry.favicon:SetNormalTexture("Interface\\AddOns\\Viewda\\Media\\star1")
+	entry.favicon:SetNormalTexture("Interface\\AddOns\\Viewda\\Media\\star1") -- http://i.imgur.com/cJEC2.png
 	entry.favicon:GetNormalTexture():SetDesaturated(not entry.favicon:GetChecked())
 	entry.favicon:SetWidth(16); entry.favicon:SetHeight(16)
 	entry.favicon:SetScript("OnClick", function(self, button)
@@ -317,7 +317,6 @@ function Viewda.UpdateDisplayEntry(index, item, path)
 	local entry = _G["ViewdaLootFrameEntry"..index] or Viewda.CreateDisplayEntry(index)
 	if not entry or not item then return end
 
-	item = tonumber(item) or item
 	local isCategory = type(item) == "string"
 	local hideIconBG = false
 
@@ -379,9 +378,11 @@ function Viewda.UpdateDisplayEntry(index, item, path)
 	-- update the item's texts
 	if isCategory or (sourceText and sourceText ~= "" and not entry.itemID) then
 		-- do nothing
-	elseif itemValue and string.find(itemValue, "x") then
+	elseif not itemValue or itemValue == "" then
+		-- do nothing
+	elseif string.find(itemValue, "x") then
 		sourceText = Viewda.locale.clickForCloseUp
-	elseif itemValue and string.find(itemValue, "/") then
+	elseif string.find(itemValue, "/") then
 		local orange, yellow, green, gray = string.split("/", itemValue)
 		sourceText = Viewda.skillColor[1] .. orange .. "|r/" ..
 			Viewda.skillColor[2] .. yellow .. "|r/" ..
@@ -723,13 +724,12 @@ function Viewda:ShowCloseUp(item, value, setName)
 	local setTable = {}
 	for i = 1, #itemInfo do
 		local infoID, infoCount = strsplit("x", itemInfo[i])
-		tinsert(setTable, { itemID = infoID, count = infoCount })
+		tinsert(setTable, { itemID = tonumber(infoID), count = tonumber(infoCount) })
 	end
 
 	-- show item entries
 	local totalShown = #setTable
 	for i = 1, totalShown do
-		-- Viewda.UpdateDisplayEntry(i, setTable[i].itemID, setTable[i].count, setName, "item")
 		Viewda.UpdateDisplayEntry(i, setTable[i].itemID, setName)
 	end
 
@@ -744,7 +744,6 @@ function Viewda:ShowCloseUp(item, value, setName)
 
 	-- update display text
 	local itemName = GetItemInfo(item)
-	-- Viewda.selectionButton:SetText((setName or "").."."..(itemName or Viewda.locale.unknown))
 	UIDropDownMenu_SetText(Viewda.dropDown, (setName or "").."."..(itemName or Viewda.locale.unknown))
 	local searchString = _G["ViewdaItemsFrameSearchBox"]:GetText()
 	searchString = searchString ~= Viewda.locale.search and searchString ~= "" and searchString or nil
