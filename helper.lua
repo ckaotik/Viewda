@@ -203,12 +203,17 @@ local function ViewOnClick(self, button)
 
 	if IsModifiedClick() then
 		local setTable = Viewda.LPT:GetSetTable(entry.value) or {}
-		local doReturn = nil
+		local doReturn, link = nil, nil
 
 		if not Viewda.LPT:IsSetMulti(entry.value) then
 			for item, _ in pairs(setTable) do
+				if item < 0 then
+					link = GetSpellLink(item)
+				else
+					_, link = GetItemInfo(item)
+				end
+				HandleModifiedItemClick(link)
 				doReturn = true
-				HandleModifiedItemClick( select(2, GetItemInfo(item)) )
 			end
 		end
 
