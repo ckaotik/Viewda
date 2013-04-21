@@ -200,6 +200,7 @@ end
 local function ViewOnClick(self, button)
 	local entry = self:GetParent()
 	local itemLink = entry.itemID and select(2, GetItemInfo(entry.itemID))
+	local itemID
 
 	if IsModifiedClick() then
 		local setTable = Viewda.LPT:GetSetTable(entry.value) or {}
@@ -207,10 +208,11 @@ local function ViewOnClick(self, button)
 
 		if not Viewda.LPT:IsSetMulti(entry.value) then
 			for item, _ in pairs(setTable) do
-				if item < 0 then
-					link = GetSpellLink(item)
+				itemID = tonumber(item) or item
+				if itemID < 0 then
+					link = GetSpellLink(itemID)
 				else
-					_, link = GetItemInfo(item)
+					_, link = GetItemInfo(itemID)
 				end
 				HandleModifiedItemClick(link)
 				doReturn = true
@@ -403,7 +405,7 @@ function Viewda.UpdateDisplayEntry(index, item, path)
 	entry.text:SetText(itemText)
 	entry.source:SetText(sourceText or "")
 
-	local currentSearch = _G["ViewdaItemsFrameSearchBox"].searchString
+	local currentSearch = _G["ViewdaDisplayFrameSearchBox"].searchString
 	if currentSearch then
 		local shouldFade = Viewda:SearchEntry(entry, currentSearch)
 		entry:SetAlpha(shouldFade and 0.3 or 1)
