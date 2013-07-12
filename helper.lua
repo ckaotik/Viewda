@@ -209,7 +209,7 @@ local function ViewOnClick(self, button)
 		if not Viewda.LPT:IsSetMulti(entry.value) then
 			for item, _ in pairs(setTable) do
 				itemID = tonumber(item) or item
-				if itemID < 0 then
+				if type(itemID) == "number" and itemID < 0 then
 					link = GetSpellLink(itemID)
 				else
 					_, link = GetItemInfo(itemID)
@@ -601,21 +601,11 @@ local function SortByValue(a, b)
 		-- category strings before actual items
 		return not valueA
 	else
-		valueA = (valueA == true) and -1 or valueA
-		valueB = (valueB == true) and -1 or valueB
+		valueA = ((valueA == true) and -1) or tonumber(valueA) or valueA
+		valueB = ((valueB == true) and -1) or tonumber(valueB) or valueB
 
-		if string.find(valueA, "/") then
-			valueA = string.match(valueA, "%d+")
-			valueA = tonumber(valueA)
-		elseif type(valueA) == "string" then
-			valueA = -1
-		end
-		if string.find(valueB, "/") then
-			valueB = string.match(valueB, "%d+")
-			valueB = tonumber(valueB)
-		elseif type(valueB) == "string" then
-			valueB = -1
-		end
+		if string.find(valueA, "/") then valueA = tonumber( string.match(valueA, "%d+") ) end
+		if string.find(valueB, "/") then valueB = tonumber( string.match(valueB, "%d+") ) end
 
 		if valueA ~= valueB then
 			return valueA < valueB
