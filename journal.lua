@@ -1,26 +1,11 @@
 local _, Viewda = ...
 
-hooksecurefunc("EncounterJournal_LootCallback", function(itemID)
-	local scrollFrame = EncounterJournal.encounter.info.lootScroll;
-
-	for i,item in pairs(scrollFrame.buttons) do
-		if item.itemID == itemID then
-			print("item was updated", itemID)
-			--[[local name, icon, slot, armorType, itemID, _, encounterID = EJ_GetLootInfoByIndex(item.index);
-			item.name:SetText(name);
-			item.icon:SetTexture(icon);
-			item.slot:SetText(slot);
-			item.boss:SetFormattedText(BOSS_INFO_STRING, EJ_GetEncounterInfo(encounterID));
-			item.armorType:SetText(armorType); --]]
-		end
-	end
-end)
-
 local LPT = LibStub("LibPeriodicTable-3.1")
 local reverseBoss = Viewda.Babble.boss:GetReverseLookupTable()
 local reverseInstance = Viewda.Babble.subzone:GetReverseLookupTable()
 
 local function UpdateLootChances()
+	if InCombatLockdown() then return end
 	local scrollFrame = EncounterJournal.encounter.info.lootScroll
 	local offset = HybridScrollFrame_GetOffset(scrollFrame)
 	local itemButtons = scrollFrame.buttons
@@ -32,17 +17,6 @@ local function UpdateLootChances()
 	local instanceName = EJ_GetInstanceInfo()
 	local difficulty = EJ_GetDifficulty()
 
-	--[[
-		DIFFICULTY_DUNGEON_NORMAL = 1
-		DIFFICULTY_DUNGEON_HEROIC = 2
-		DIFFICULTY_RAID10_NORMAL = 3
-		DIFFICULTY_RAID25_NORMAL = 4
-		DIFFICULTY_RAID10_HEROIC = 5
-		DIFFICULTY_RAID25_HEROIC = 6
-		DIFFICULTY_RAID_LFR = 7
-		DIFFICULTY_DUNGEON_CHALLENGE = 8
-		DIFFICULTY_RAID40 = 9
-	--]]
 	if not EJ_IsValidInstanceDifficulty(difficulty) then
 		if EJ_InstanceIsRaid() and difficulty < 3 then
 			difficulty = difficulty + 2
