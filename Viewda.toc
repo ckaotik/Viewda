@@ -37,6 +37,6 @@ Locale\deDE.lua
 # core files
 constants.lua
 helper.lua
-core.lua
+Viewda.lua
 journal.lua
 options.lua
