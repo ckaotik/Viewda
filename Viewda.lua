@@ -236,14 +236,10 @@ searchbox:SetScript("OnEscapePressed", function(self)
 	EditBox_ClearFocus(self)
 end)
 searchbox:SetScript("OnTextChanged", function(self)
+	InputBoxInstructions_OnTextChanged(self)
 	local text = self:GetText()
 	local oldText = self.searchString
-
-	if text == "" or text == SEARCH then
-		self.searchString = nil
-	else
-		self.searchString = string.lower(text)
-	end
+	self.searchString = text ~= '' and string.lower(text) or nil
 
 	if oldText ~= self.searchString then
 		Viewda:SearchInCurrentView(self.searchString or "")
