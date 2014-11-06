@@ -265,7 +265,7 @@ Viewda:Show()
 -- <Frame name="CharacterFrame" toplevel="true" movable="true" parent="UIParent" hidden="true" inherits="ButtonFrameTemplate">
 -- foo = CreateFrame("Frame", "LPTBrowser", UIParent, "ButtonFrameTemplate")
 --[[
-foo:EnableMouse()
+foo:EnableMouse(true)
 foo:SetWidth(646)
 foo:Hide()
 foo:SetAttribute("UIPanelLayout-defined", true)
